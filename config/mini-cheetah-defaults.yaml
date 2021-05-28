@@ -1,7 +1,7 @@
 # Generated on Sat Feb  9 13:18:45 2019
 __collection-name__: robot-parameters
 
-cheater_mode      : 0
+cheater_mode      : 1
 control_mode      : 6
 controller_dt     : 0.002
 myValue           : 2222

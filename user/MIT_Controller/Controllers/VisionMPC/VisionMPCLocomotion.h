@@ -64,8 +64,10 @@ public:
     Vec4<float> contact_state;
 
 private:
-//  void _UpdateFoothold(Vec3<float> & foot, const Vec3<float> & body_pos,
-//      const DMat<float> & height_map, const DMat<int> & idx_map);
+    void _UpdateFoothold(Vec3<float> & foot, const Vec3<float> & body_pos,
+                            const DMat<float> & height_map, const DMat<int> & idx_map);
+    void _IdxMapCheckingOld(int x_idx, int y_idx, int & x_idx_selected, int & y_idx_selected,
+                          const DMat<int> & idx_map);
     //1119
     void _UpdateFootholdNew(Vec3<float> & foot_des, Vec3<float> & foot_ini,const Vec3<float> & body_pos,
                             const DMat<float> & height_map, const DMat<float> & idx_map);
@@ -80,7 +82,7 @@ private:
     Vec3<float> rpy_des;
     Vec3<float> v_rpy_des;
 
-    float _body_height = 0.29;
+//    float _body_height = 0.29;
     void updateMPCIfNeeded(int* mpcTable, ControlFSMData<float>& data);
     void solveDenseMPC(int *mpcTable, ControlFSMData<float> &data);
     int iterationsBetweenMPC;
@@ -91,7 +93,7 @@ private:
     Vec3<float> f_ff[4];
     Vec4<float> swingTimes;
     FootSwingTrajectory<float> footSwingTrajectories[4];
-    VisionGait trotting, bounding, pronking, galloping, standing, trotRunning;
+    VisionGait trotting, standing;
     Mat3<float> Kp, Kd, Kp_stance, Kd_stance;
     bool firstRun = true;
     bool firstSwing[4];
@@ -99,28 +101,29 @@ private:
     float stand_traj[6];
     int current_gait;
     int gaitNumber;
+    static const int sumStep = 18;//0528
 
     Vec3<float> world_position_desired;
     Vec3<float> rpy_int;
     Vec3<float> rpy_comp;
     Vec3<float> pFoot[4];
+    float pzFootMin;
     Vec3<float> pfoot_des[4];//1111
     Vec3<float> pfoot_ini[4];//1111
     Vec3<float> pfoot_log[4];//1123
-//    Vec4<float> ptrue_h;//1208
     Vec3<float> Pf[4];//1112
     Vec3<float> pDesFootWorld[4];//1112
     float trajAll[12*36];
     lcm::LCM footLCM;//1112
-    float vx=0.208;//1113
+    float vx=0.21;//1113
     float vy=0.;//0.0208;
-    Vec3<float> delta={0.1,0.00,0.00};
+    Vec3<float> delta = {0.1,0.00,0.00};
     vector<vector<float> > z_list; //initialization is in function initialize();
-    int stepcount[4]={0,0,0,0};//1114
-    float BodyHeight=0.29;
-    bool checkStep_OK=true;//1119
-    float StepHeight=0.07;
-    float rel_height;//1208
+    int stepcount[4] = {0,0,0,0};//1114
+    float BodyHeight = 0.29;
+    bool checkStep_OK = true;//1119
+    float StepHeight;
+    constexpr static const float camera_offset = 0.20;
     int getxidx(float pfootx);
     int getyidx(float pfooty);
 

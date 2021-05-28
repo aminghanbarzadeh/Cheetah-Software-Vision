@@ -595,6 +595,7 @@ void Simulation::addCollisionMesh(double mu, double resti, double grid_size,
  * Draw the height map from the pcd file --1120
  */
 void Simulation::drawTerrain() {
+    int block_num = 0;
     if (buildTerrian){
         for (int i(0); i<h_map.rows();++i){
             for (int j(0); j <h_map.cols(); ++j) {//
@@ -627,21 +628,22 @@ void Simulation::drawTerrain() {
                         else if (s_map(i, j) > 5.0)
                             color = {1, 0, 0, 1.0};//red
                         addCollisionBox(0.7, 0, 0.022, 0.022, h_map(i, j), pos, r, color, true, false);
-                        std::cout << " x " << pos[0] << " y " << pos[1]
-                                  << " h " <<h_map(i, j)<< " s " << s_map(i, j)<< std::endl;
+//                        std::cout << " x " << pos[0] << " y " << pos[1]
+//                                  << " h " <<h_map(i, j)<< " s " << s_map(i, j)<< std::endl;
+                        block_num++;
                     }
                 }
             }
         }
         buildTerrian=false;
+        printf("[Simulation] Loaded %d height map blocks with traversability scores\n" , block_num);
     }
 }
+
 /*
 * Draw real time height map by vision --1021
 */
-
 void Simulation::drawRealtimeTerrain(int fps) {
-
 
     if (fps%1==0){//0.25hz
             if (std::abs(pos_x-_glo_robot_pos[0])>0.015 ||std::abs(pos_y-_glo_robot_pos[1])>0.015
@@ -726,12 +728,13 @@ void Simulation::runAtSpeed(std::function<void(std::string)> errorCallback, bool
             _simParams.dynamics_dt, _simParams.low_level_dt, _simParams.high_level_dt,
             _simParams.simulation_speed, graphics);
 
+//    Draw height map at the start of the simulation
     drawTerrain();
 
     int fps=0;
     while (_running) {
-//        std::cout<<_glo_robot_pos[2]<<std::endl;
-        drawRealtimeTerrain(fps);
+//        Draw real time height map
+//        drawRealtimeTerrain(fps);
         fps++;
         double dt = _simParams.dynamics_dt;
         double dtLowLevelControl = _simParams.low_level_dt;

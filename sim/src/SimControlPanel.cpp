@@ -395,8 +395,8 @@ void SimControlPanel::errorCallback(std::string errorMessage) {
 void SimControlPanel::on_startButton_clicked() {
   // get robot type
   RobotType robotType;
-  robotType =RobotType::MINI_CHEETAH;
-  /*if (ui->cheetah3Button->isChecked()) {
+//  robotType =RobotType::MINI_CHEETAH;
+  if (ui->cheetah3Button->isChecked()) {
     robotType = RobotType::CHEETAH_3;
   } else if (ui->miniCheetahButton->isChecked()) {
     robotType = RobotType::MINI_CHEETAH;
@@ -412,8 +412,8 @@ void SimControlPanel::on_startButton_clicked() {
     return;
   }
 
-  _simulationMode = ui->simulatorButton->isChecked();*/
-    _simulationMode = true;
+  _simulationMode = ui->simulatorButton->isChecked();
+//    _simulationMode = true;
   // graphics
   printf("[SimControlPanel] Initialize Graphics...\n");
   _graphicsWindow = new Graphics3D();
@@ -440,9 +440,6 @@ void SimControlPanel::on_startButton_clicked() {
       createErrorMessage("FATAL: Exception thrown during simulator setup\n" + std::string(e.what()));
       throw e;
     }
-
-
-
 
     // start sim
     _simThread = std::thread(
