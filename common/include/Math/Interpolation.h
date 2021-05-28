@@ -36,7 +36,8 @@ y_t cubicBezier(y_t y0, y_t yf, x_t x) {
 }
 
 /*!
- * Cubic bezier interpolation derivative between y0 and yf.  x is between 0 and 1
+ * Cubic bezier interpolation derivative between y0 and yf.  x is between 0 and
+ * 1
  */
 template <typename y_t, typename x_t>
 y_t cubicBezierFirstDerivative(y_t y0, y_t yf, x_t x) {
@@ -49,7 +50,8 @@ y_t cubicBezierFirstDerivative(y_t y0, y_t yf, x_t x) {
 }
 
 /*!
- * Cubic bezier interpolation derivative between y0 and yf.  x is between 0 and 1
+ * Cubic bezier interpolation derivative between y0 and yf.  x is between 0 and
+ * 1
  */
 template <typename y_t, typename x_t>
 y_t cubicBezierSecondDerivative(y_t y0, y_t yf, x_t x) {
