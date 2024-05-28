@@ -43,7 +43,8 @@ void FSM_State_BalanceStand<T>::onEnter() {
   // Always set the gait to be standing in this state
   this->_data->_gaitScheduler->gaitData._nextGait = GaitType::STAND;
   
-  _ini_body_pos = (this->_data->_stateEstimator->getResult()).position;
+  _ini_body_pos = (this->_data->_stateEstimator->getResult()).position; 
+  //_ini_body_pos[2] = 0.7; //IUST
 
   if(_ini_body_pos[2] < 0.2) {
     _ini_body_pos[2] = 0.3;
@@ -230,16 +231,17 @@ void FSM_State_BalanceStand<T>::BalanceStandStep() {
     _wbc_data->pBody_des[2] += 0.12 * rc_cmd->height_variation;
   }else{
     // Orientation
-    _wbc_data->pBody_RPY_des[0] = 
-     0.6* this->_data->_desiredStateCommand->gamepadCommand->leftStickAnalog[0];
-     _wbc_data->pBody_RPY_des[1] = 
-      0.6*this->_data->_desiredStateCommand->gamepadCommand->rightStickAnalog[0];
-    _wbc_data->pBody_RPY_des[2] -= 
-      this->_data->_desiredStateCommand->gamepadCommand->rightStickAnalog[1];
+    //_wbc_data->pBody_RPY_des[0] = 
+     //0.6* this->_data->_desiredStateCommand->gamepadCommand->leftStickAnalog[0];
+     //_wbc_data->pBody_RPY_des[1] = 
+      //0.6*this->_data->_desiredStateCommand->gamepadCommand->rightStickAnalog[0];
+    //_wbc_data->pBody_RPY_des[2] -= 
+      //this->_data->_desiredStateCommand->gamepadCommand->rightStickAnalog[1];
     
     // Height
-    _wbc_data->pBody_des[2] += 
-      0.12 * this->_data->_desiredStateCommand->gamepadCommand->rightStickAnalog[0];
+    s += 0.00002 * this->_data->_desiredStateCommand->gamepadCommand->rightStickAnalog[0];
+    _wbc_data->pBody_des[2] += s;
+    //std::cout<<"@@@@@@@@@@@@@="<< s <<std::endl;
   }
   _wbc_data->vBody_Ori_des.setZero();
 

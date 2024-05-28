@@ -37,6 +37,7 @@ struct GamepadCommand {
     a = false;
     b = false;
     x = false;
+    //xpressed = false;
     y = false;
     leftStickButton = false;
     rightStickButton = false;

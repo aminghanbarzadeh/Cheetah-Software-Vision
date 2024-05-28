@@ -60,6 +60,7 @@ void FSM_State_StandUp<T>::run() {
       this->_data->_legController->commands[i].pDes = _ini_foot_pos[i];
       this->_data->_legController->commands[i].pDes[2] = 
         progress*(-hMax) + (1. - progress) * _ini_foot_pos[i][2];
+      //std::cout<<"@@@@@@@@@@@@@="<< this->_data->_legController->commands[i].pDes[2] <<std::endl;
     }
   }
 }

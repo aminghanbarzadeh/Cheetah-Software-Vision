@@ -29,6 +29,7 @@ void ImuSimulator<T>::computeAcceleration(
   acc += spatial::spatialToLinearAcceleration(robotStateD.dBodyVelocity,
                                               robotState.bodyVelocity)
              .template cast<float>();
+  
 }
 
 /*!
@@ -81,7 +82,7 @@ void ImuSimulator<T>::updateCheaterState(
                        spatial::spatialToLinearAcceleration(
                            robotStateD.dBodyVelocity, robotState.bodyVelocity);
   state.orientation = robotState.bodyOrientation;
-  state.position = robotState.bodyPosition;
+  state.position = robotState.bodyPosition; //IUST
   state.omegaBody = robotState.bodyVelocity.template head<3>();
   state.vBody = robotState.bodyVelocity.template tail<3>();
 }

@@ -79,7 +79,7 @@ bool BodyOriTask<T>::_UpdateTaskJacobian() {
   Quat<T> quat = _robot_sys->_state.bodyOrientation;
   Mat3<T> Rot = ori::quaternionToRotationMatrix(quat);
   TK::Jt_.block(0, 0, 3, 3) = Rot.transpose();
-  //pretty_print(Rot, std::cout, "Rot mat");
+  //std::cout<<"@@@@@@@@@@@@@@@@="<< TK::Jt_ <<std::endl;
   return true;
 }
 

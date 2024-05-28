@@ -44,6 +44,7 @@ class FSM_State_Locomotion : public FSM_State<T> {
 
   // Impedance control for the stance legs during locomotion
   void StanceLegImpedanceControl(int leg);
+  double s = 0.0;
 };
 
 #endif  // FSM_STATE_LOCOMOTION_H

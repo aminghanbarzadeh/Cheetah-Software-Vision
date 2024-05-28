@@ -196,6 +196,7 @@ void VisionMPCLocomotion::_UpdateFoothold(Vec3<float> & foot_pos, const Vec3<flo
     foot_pos[0] = (x_idx_selected - row_idx_half)*grid_size + body_pos[0];
     foot_pos[1] = (y_idx_selected - col_idx_half)*grid_size + body_pos[1];
     foot_pos[2] = height_map(x_idx_selected, y_idx_selected);
+    std::cout << "bodyPosition+!@+#$%+^+%+#&*%(%*&^%$): " << foot_pos[2] << std::endl; //IUST
 
 }
 
@@ -438,8 +439,8 @@ void VisionMPCLocomotion::_IdxMapChecking(int x_idx, int y_idx, int & x_idx_sele
         float minscore=idx_map(x_idx,y_idx);
         int min_x=x_idx,min_y=y_idx;
 
-        for (int i=x_idx-2;i<=x_idx+2;i++){
-            for (int j = y_idx-1; j <= y_idx+1; ++j) {
+        for (int i=-2;i <= 2;i++){
+            for (int j = -1; j <= 1; ++j) {
                 if(idx_map(i,j)<minscore){
                     minscore=idx_map(i,j);
                     min_x=i;
@@ -478,7 +479,7 @@ void VisionMPCLocomotion::run(ControlFSMData<float>& data, const Vec3<float> & v
         stand_traj[2] = BodyHeight;//0.29;
         stand_traj[3] = 0;
         stand_traj[4] = 0;
-        stand_traj[5] = seResult.rpy[2];
+        stand_traj[5] = seResult.rpy[2]; //TODO
         world_position_desired[0] = stand_traj[0];
         world_position_desired[1] = stand_traj[1];
     }

@@ -200,7 +200,7 @@ Vec3<typename T::Scalar> quatToRPY(const Eigen::MatrixBase<T>& q) {
   rpy(2) =
       std::atan2(2 * (q[1] * q[2] + q[0] * q[3]),
                  square(q[0]) + square(q[1]) - square(q[2]) - square(q[3]));
-  rpy(1) = std::asin(as);
+  rpy(1) = std::asin(as); //IUST change pitch angle took too long to make //some changes //TODO
   rpy(0) =
       std::atan2(2 * (q[2] * q[3] + q[0] * q[1]),
                  square(q[0]) - square(q[1]) - square(q[2]) + square(q[3]));

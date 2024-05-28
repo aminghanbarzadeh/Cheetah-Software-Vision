@@ -40,6 +40,8 @@ void CheaterOrientationEstimator<T>::run() {
   this->_stateEstimatorData.result->aWorld =
       this->_stateEstimatorData.result->rBody.transpose() *
       this->_stateEstimatorData.result->aBody;
+
+  //std::cout << "cheaterstate++++++++++++++++++++++++++++ " << this->_stateEstimatorData.cheaterState->orientation.template cast<T>() << std::endl;
 }
 
 /*!
@@ -86,6 +88,8 @@ void VectorNavOrientationEstimator<T>::run() {
   this->_stateEstimatorData.result->aWorld =
       this->_stateEstimatorData.result->rBody.transpose() *
       this->_stateEstimatorData.result->aBody;
+      
+  //std::cout << "vectornav++++++++++++++++++++++++++++ " << this->_stateEstimatorData.vectorNavData->accelerometer.template cast<T>() << std::endl;
 }
 
 

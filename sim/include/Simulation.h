@@ -19,13 +19,15 @@
 #include "SimUtilities/ti_boardcontrol.h"
 #include "Utilities/SharedMemory.h"
 #include "Utilities/Timer.h"
+
 #include <mutex>
 #include <queue>
 #include <utility>
 #include <vector>
+
 #include <lcm/lcm-cpp.hpp>
 #include "simulator_lcmt.hpp"
-#include "heightmap333_t.hpp"
+
 #define SIM_LCM_NAME "simulator_state"
 
 /*!
@@ -57,8 +59,8 @@ class Simulation {
                          bool addToWindow = true);
   void addCollisionBox(double mu, double resti, double depth, double width,
                        double height, const Vec3<double>& pos,
-                       const Mat3<double>& ori, const Vec4<float>& rgb, bool addToWindow = true,
-                       bool transparent = true );
+                       const Mat3<double>& ori, bool addToWindow = true,
+                       bool transparent = true);
   void addCollisionMesh(double mu, double resti, double grid_size,
                         const Vec3<double>& left_corner_loc,
                         const DMat<double>& height_map, bool addToWindow = true,
@@ -71,9 +73,6 @@ class Simulation {
    * Updates the graphics from the connected window
    */
   void updateGraphics();
-//  draw heightmap -wyn
-  void drawTerrain();
-  void drawRealtimeTerrain(int fps);
 
   void runAtSpeed(std::function<void(std::string)> error_callback, bool graphics = true);
   void sendControlParameter(const std::string& name,
@@ -121,22 +120,6 @@ class Simulation {
  private:
   void handleControlError();
   Graphics3D* _window = nullptr;
-  //1020-1120
-  DMat<float> s_map;
-  DMat<float> h_map;
-  size_t x_size = 100;
-  size_t y_size = 100;
-  Vec3<float>  _glo_robot_pos;
-  float grid_map_size=0.02;
-  vector<double>_x_log; // locx,
-  vector<double>_y_log; // locy,
-  vector<double>_z_log; // height
-  Vec3<float> pos_;
-  bool drawbox=false;//1120
-  bool drawmap = false;
-  bool buildTerrian=true;//1120
-  Vec4<float> color={0.7f,0.7f,0.7f, 1.f};//1120
-  double pos_x, pos_y, ori_yaw = 0;
 
   std::mutex _robotMutex;
   SharedMemoryObject<SimulatorSyncronizedMessage> _sharedMemory;
@@ -160,9 +143,6 @@ class Simulation {
   TI_BoardControl _tiBoards[4];
   RobotType _robot;
   lcm::LCM* _lcm = nullptr;
-// 0928
-//  heightmap333_t heightmap333_lcm;
-//  lcm::LCM heightmap333LCM;
 
   std::function<void(void)> _uiUpdate;
   std::function<void(std::string)> _errorCallback;
@@ -175,7 +155,6 @@ class Simulation {
   double _timeOfNextHighLevelControl = 0.;
   s64 _highLevelIterations = 0;
   simulator_lcmt _simLCM;
-
 };
 
 #endif  // PROJECT_SIMULATION_H

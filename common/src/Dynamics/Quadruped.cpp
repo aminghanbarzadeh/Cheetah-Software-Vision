@@ -89,13 +89,13 @@ bool Quadruped<T>::buildModel(FloatingBaseModel<T>& model) {
                     _kneeGearRatio, bodyID - 1, JointType::Revolute,
                     CoordinateAxis::Y, xtreeKnee, xtreeKneeRotor);
 
-      model.addGroundContactPoint(bodyID, Vec3<T>(0.01, _kneeLinkY_offset, -_kneeLinkLength+0.005), true);
+      model.addGroundContactPoint(bodyID, Vec3<T>(0.01, _kneeLinkY_offset, -_kneeLinkLength+0.005), true); //IUST
     } else {
       model.addBody(_kneeInertia, _kneeRotorInertia, _kneeGearRatio, bodyID - 1,
                     JointType::Revolute, CoordinateAxis::Y, xtreeKnee,
                     xtreeKneeRotor);
       //add foot ground contact point
-      model.addGroundContactPoint(bodyID, Vec3<T>(0.01, -_kneeLinkY_offset, -_kneeLinkLength+0.005), true);
+      model.addGroundContactPoint(bodyID, Vec3<T>(0.01, -_kneeLinkY_offset, -_kneeLinkLength+0.005), true); //IUST
     }
 
     // add foot

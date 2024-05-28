@@ -146,6 +146,7 @@ void WBC_Ctrl<T>::_UpdateModel(const StateEstimate<T> & state_est,
 
   _state.bodyOrientation = state_est.orientation;
   _state.bodyPosition = state_est.position;
+  //std::cout << "bodyPosition+!@+#$%+^+%+#&*%(%*&^%$): " << _state.bodyPosition << std::endl; IUST
   for(size_t i(0); i<3; ++i){
     _state.bodyVelocity[i] = state_est.omegaBody[i];
     _state.bodyVelocity[i+3] = state_est.vBody[i];

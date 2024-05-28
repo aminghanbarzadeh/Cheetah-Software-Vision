@@ -263,11 +263,13 @@ void FSM_State_Locomotion<T>::LocomotionControlStep() {
   }
 
   if(this->_data->userParameters->use_wbc > 0.9){
+    //std::cout<<"@@@@@@@@@@@@@@@@="<< _wbc_data->pBody_des[1] <<std::endl;
     _wbc_data->pBody_des = cMPCOld->pBody_des;
     _wbc_data->vBody_des = cMPCOld->vBody_des;
     _wbc_data->aBody_des = cMPCOld->aBody_des;
 
     _wbc_data->pBody_RPY_des = cMPCOld->pBody_RPY_des;
+    //std::cout<<"@@@@@@@@@@@@@@@@="<< _wbc_data->pBody_RPY_des[1] <<std::endl;
     _wbc_data->vBody_Ori_des = cMPCOld->vBody_Ori_des;
     
     for(size_t i(0); i<4; ++i){

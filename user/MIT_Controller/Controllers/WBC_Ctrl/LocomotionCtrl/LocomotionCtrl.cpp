@@ -4,6 +4,12 @@
 #include <WBC_Ctrl/TaskSet/BodyPosTask.hpp>
 //#include <WBC_Ctrl/TaskSet/BodyPostureTask.hpp>
 #include <WBC_Ctrl/TaskSet/LinkPosTask.hpp>
+#include <chrono>
+#include <iostream>
+#include <sstream>
+#include <ctime>
+
+
 
 template<typename T>
 LocomotionCtrl<T>::LocomotionCtrl(FloatingBaseModel<T> model):
@@ -220,7 +226,7 @@ void LocomotionCtrl<T>::_LCM_PublishData() {
   WBCtrl::_wbc_data_lcm.body_ori_cmd[3] = _quat_des[3];
   WBCtrl::_wbc_data_lcm.body_ori[3] = WBCtrl::_state.bodyOrientation[3];
 
-  WBCtrl::_wbcLCM.publish("wbc_lcm_data", &(WBCtrl::_wbc_data_lcm) );
+  WBCtrl::_wbcLCM.publish("wbc_lcm_data", &(WBCtrl::_wbc_data_lcm) ); //IUST_LCM
 }
 
 template class LocomotionCtrl<float>;

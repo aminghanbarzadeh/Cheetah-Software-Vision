@@ -65,7 +65,8 @@ void WBIC<T>::MakeTorque(DVec<T>& cmd, void* extra_input) {
     qddot_pre += JtBar * (xddot - JtDotQdot - Jt * qddot_pre);
     Npre = Npre * (_eye - JtBar * JtPre);
 
-    // pretty_print(xddot, std::cout, "xddot");
+    //std::cout << "bh############################ " << xddot[0] << std::endl;
+    // pretty_print(xddot[2], std::cout, "xddot");
     // pretty_print(JtDotQdot, std::cout, "JtDotQdot");
     // pretty_print(qddot_pre, std::cout, "qddot 2");
     // pretty_print(Jt, std::cout, "Jt");

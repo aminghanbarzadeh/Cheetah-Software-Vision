@@ -30,9 +30,21 @@ void VisionRobotState::set(flt* p_, flt* v_, flt* q_, flt* w_, flt* r_,flt yaw_)
     fpt yc = cos(yaw_);
     fpt ys = sin(yaw_);
 
-    R_yaw <<  yc,  -ys,   0,
-             ys,  yc,   0,
-               0,   0,   1;
+    //R_yaw <<  yc,  -ys,   0,
+      //       ys,  yc,   0,
+        //       0,   0,   1;
+
+    const fpt ps = sin(0.17);
+    const fpt pc = cos(0.17);
+
+    R_pitch <<  pc,  0,   ps, //IUST
+               0,  1,   0,
+               -ps,   0,   pc;
+
+    R_yaw <<  yc*pc,  -ys,   yc*ps,
+             ys*pc,  yc,   ys*ps,
+               -ps,   0,   pc;
+
 
     Matrix<fpt,3,1> Id;
     Id << .07f, 0.26f, 0.242f;

@@ -27,7 +27,7 @@ void FootstepPlanner::buildInputTrajectory(float duration, float dt, InputTrajec
   _inputTrajectory.reserve(duration / dt);
 
   Vec3<float> velocity(x0.v[0], x0.v[1], 0.f);
-  Vec3<float> position(x0.p[0], x0.p[1], 0.f);
+  Vec3<float> position(x0.p[0], x0.p[1], 0.f); //IUST
   float theta = x0.theta;
   float t = 0;
   for(uint32_t i = 0; i < (duration / dt); i++) {

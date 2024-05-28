@@ -45,6 +45,7 @@ class FSM_State_BalanceStand : public FSM_State<T> {
   Vec3<T> _ini_body_pos;
   Vec3<T> _ini_body_ori_rpy;
   T _body_weight;
+  double s = 0.0;
 };
 
 #endif  // FSM_STATE_BALANCESTAND_H
