@@ -41,6 +41,9 @@ bool BodyPosTask<T>::_UpdateCommand(const void* pos_des, const DVec<T>& vel_des,
     TK::op_cmd_[i] = _Kp[i] * ((*pos_cmd)[i] - link_pos[i]) +
                      _Kd[i] * (TK::vel_des_[i] - curr_vel[i + 3]) +
                      TK::acc_des_[i];
+    
+    //std::cout << "cmd++++++++++++++++++++++++++++ " << (Vec3<T>*)pos_des << std::endl;
+    //std::cout << "see++++++++++++++++++++++++++++ " << link_pos[2] << std::endl;
   }
   // Quat<T> quat = _robot_sys->_state.bodyOrientation;
   // Mat3<T> Rot = ori::quaternionToRotationMatrix(quat);

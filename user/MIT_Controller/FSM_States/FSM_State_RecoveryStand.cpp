@@ -162,7 +162,7 @@ template <typename T>
 void FSM_State_RecoveryStand<T>::_StandUp(const int & curr_iter){
   T body_height = this->_data->_stateEstimator->getResult().position[2];
   bool something_wrong(false);
-
+  //std::cout<<"@@@@@@@@@@@@@="<< this->_data->_stateEstimator->getResult().position[2] <<std::endl;
   if( _UpsideDown() || (body_height < 0.1 ) ) { 
     something_wrong = true;
   }

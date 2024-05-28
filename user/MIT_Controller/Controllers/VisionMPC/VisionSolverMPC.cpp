@@ -250,7 +250,7 @@ void vision_quat_to_rpy(Quaternionf q, Matrix<fpt,3,1>& rpy)
   //edge case!
   fpt as = vision_t_min(-2.*(q.x()*q.z()-q.w()*q.y()),.99999);
   rpy(0) = atan2(2.f*(q.x()*q.y()+q.w()*q.z()),vision_sq(q.w()) + vision_sq(q.x()) - vision_sq(q.y()) - vision_sq(q.z()));
-  rpy(1) = asin(as);
+  rpy(1) = asin(as) ;  //add a number between 0-1.5708 for pitch angle between 0-pi/2(IUST) //NOT working
   rpy(2) = atan2(2.f*(q.y()*q.z()+q.w()*q.x()),vision_sq(q.w()) - vision_sq(q.x()) - vision_sq(q.y()) + vision_sq(q.z()));
 
 }

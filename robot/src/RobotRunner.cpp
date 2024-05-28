@@ -227,12 +227,15 @@ void RobotRunner::initializeStateEstimator(bool cheaterMode) {
   Vec4<float> contactDefault;
   contactDefault << 0.5, 0.5, 0.5, 0.5;
   _stateEstimator->setContactPhase(contactDefault);
+  //std::cout << "se1++++++++++++++++++++++++++++ " << contactDefault << std::endl;
   if (cheaterMode) {
     _stateEstimator->addEstimator<CheaterOrientationEstimator<float>>();
     _stateEstimator->addEstimator<CheaterPositionVelocityEstimator<float>>();
+    //std::cout << "se2++++++++++++++++++++++++++++ " << contactDefault << std::endl;
   } else {
     _stateEstimator->addEstimator<VectorNavOrientationEstimator<float>>();
     _stateEstimator->addEstimator<LinearKFPositionVelocityEstimator<float>>();
+    //std::cout << "se3++++++++++++++++++++++++++++ " << contactDefault << std::endl;
   }
 }
 

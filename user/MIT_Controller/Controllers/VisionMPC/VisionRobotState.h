@@ -17,6 +17,7 @@ class VisionRobotState
         Matrix<fpt,3,4> r_feet;
         Matrix<fpt,3,3> R;
         Matrix<fpt,3,3> R_yaw;
+        Matrix<fpt,3,3> R_pitch; //IUST
         Matrix<fpt,3,3> I_body;
         Quaternionf q;
         fpt yaw;

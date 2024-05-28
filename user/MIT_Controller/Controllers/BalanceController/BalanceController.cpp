@@ -753,7 +753,7 @@ void BalanceController::rpyToR(Eigen::MatrixXd& R, double* rpy_in) {
   Rz(1, 0) = sin(rpy_in[2]);
   Rz(1, 1) = cos(rpy_in[2]);
 
-  Ry(0, 0) = cos(rpy_in[1]);
+  Ry(0, 0) = cos(rpy_in[1]); //IUST changed pitch angle 
   Ry(0, 2) = sin(rpy_in[1]);
   Ry(2, 0) = -sin(rpy_in[1]);
   Ry(2, 2) = cos(rpy_in[1]);

@@ -25,6 +25,7 @@ DynamicsSimulator<T>::DynamicsSimulator(FloatingBaseModel<T> &model,
 
   _state.bodyVelocity = SVec<T>::Zero();
   _state.bodyPosition = Vec3<T>::Zero();
+  //std::cout << "pooooooooooooooos############ (" << _state.bodyPosition << ")\n";
   _state.bodyOrientation = Quat<T>::Zero();
   _state.q = DVec<T>::Zero(_model._nDof - 6);
   _state.qd = DVec<T>::Zero(_model._nDof - 6);
@@ -105,9 +106,17 @@ void DynamicsSimulator<T>::integrate(T dt) {
     _state.bodyVelocity += _dstate.dBodyVelocity * dt;
     _state.bodyPosition += _dstate.dBodyPosition * dt;
     _state.bodyOrientation = integrateQuat(_state.bodyOrientation, omega0, dt);
+    //std::cout << "pos123############ (" << _state.bodyPosition << ")\n";
   } else {
     // actual integration
     // Velocity Update by integrating acceleration
+    //if (_state.bodyPosition[2]>0.6 || _state.bodyPosition[2]<0.4)
+    //{
+      //_state.bodyPosition[2] = 0.5;
+    //}
+    
+
+    //_state.bodyPosition[2] = 0.5;
     _state.qd += _dstate.qdd * dt;
     _state.bodyVelocity += _dstate.dBodyVelocity * dt;
 
@@ -121,6 +130,11 @@ void DynamicsSimulator<T>::integrate(T dt) {
         R_body.transpose() * _state.bodyVelocity.template block<3, 1>(3, 0);
     Vec3<T> omegaBody = _state.bodyVelocity.template block<3, 1>(0, 0);
 
+    //if (abs(_dstate.dBodyPosition[2]) > 0.1)
+    //{
+      //_dstate.dBodyPosition[2] = 0.1;
+    //}
+    
     // Position Update
     _state.q += _state.qd * dt;
     _state.bodyPosition += _dstate.dBodyPosition * dt;
@@ -128,6 +142,8 @@ void DynamicsSimulator<T>::integrate(T dt) {
         integrateQuatImplicit(_state.bodyOrientation, omegaBody, dt);
     _dstate.dBodyVelocity = (_state.bodyVelocity - _lastBodyVelocity) / dt;
     _lastBodyVelocity = _state.bodyVelocity;
+    //std::cout << "ifp############ (" << R_body.transpose() << ")\n";
+    //std::cout << "ifdp############ (" << _state.bodyPosition[2] << ")\n";
   }
 }
 

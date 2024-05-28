@@ -42,7 +42,7 @@ uint16_t channel_data[18];
  * Unpack sbus message into channels
  */
 void unpack_sbus_data(uint8_t sbus_data[], uint16_t *channels_) {
-  if ((sbus_data[0] == 0xF) && (sbus_data[24] == 0x0)) {
+  if ((sbus_data[0] == 0xF) && (sbus_data[24] == 0)) {
     channels_[0] = ((sbus_data[1]) | ((sbus_data[2] & 0x7) << 8));
     channels_[1] = (sbus_data[2] >> 3) | ((sbus_data[3] & 0x3F) << 5);
     channels_[2] = ((sbus_data[3] & 0xC0) >> 6) | (sbus_data[4] << 2) |

@@ -21,12 +21,10 @@
 #include <leg_control_data_lcmt.hpp>
 #include "rs_pointcloud_t.hpp"
 #include "heightmap_t.hpp"
-#include "heightnew_t.hpp"
 #include "traversability_map_t.hpp"
 #include "obstacle_visual_t.hpp"
 #include "velocity_visual_t.hpp"
-#include "traversability_float_t.hpp"
-#include "footsteps.hpp"
+
 namespace Ui {
 class SimControlPanel;
 }
@@ -136,8 +134,6 @@ public slots:
   std::string _terrainFileName;
 
   // Vision data Drawing
-  void handleHeightmapnewLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan,
-                          const heightnew_t* msg);
   void handleHeightmapLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan, 
       const heightmap_t* msg);
   void heightmapLCMThread() { while (true) { _heightmapLCM.handle(); } }
@@ -145,14 +141,11 @@ public slots:
   void handlePointsLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan, 
       const rs_pointcloud_t* msg);
   void pointsLCMThread() { while (true) { _pointsLCM.handle(); } }
-//  1030
-  void handleIndexmapfloatLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan,
-                              const traversability_float_t* msg);
-  void handleIndexmapLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan, //int
+
+  void handleIndexmapLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan, 
       const traversability_map_t* msg);
   void indexmapLCMThread() { while (true) { _indexmapLCM.handle(); } }
-  void handleFootstepsLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan,
-                           const footsteps* msg);
+
   void handleObstacleLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan, 
       const obstacle_visual_t* msg);
   void handleVelocityCMDLCM(const lcm::ReceiveBuffer* rbuf, const std::string& chan, 

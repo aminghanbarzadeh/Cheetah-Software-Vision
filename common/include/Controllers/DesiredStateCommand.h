@@ -101,6 +101,10 @@ public:
   const GamepadCommand* gamepadCommand;
 
   bool trigger_pressed = false;
+  bool ascending_trigger = false;
+  bool descending_trigger = false;
+  bool ground_trigger = false;
+  bool cancel_trigger = false;
 
 private:
   StateEstimate<T>* stateEstimate;

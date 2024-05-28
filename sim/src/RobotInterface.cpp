@@ -68,6 +68,7 @@ void RobotInterface::handleVisualizationData(
   (void)chan;
   for (int i = 0; i < 3; i++) {
     _fwdKinState.bodyPosition[i] = msg->x[i];
+    //_fwdKinState.bodyPosition[2] += 0.5; 
   }
 
   for (int i = 0; i < 4; i++) {

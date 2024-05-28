@@ -12,7 +12,9 @@
 using Eigen::Array4f;
 using Eigen::Array4i;
 
-
+extern float gholam;
+extern bool asc;
+extern bool descending;
 template<typename T>
 struct CMPC_Result {
   LegControllerCommand<T> commands[4];
@@ -104,6 +106,7 @@ public:
   Vec3<float> Fr_des[4];
 
   Vec4<float> contact_state;
+  //bool ascending = false;
 
 private:
   void _SetupCommand(ControlFSMData<float> & data);
@@ -112,10 +115,11 @@ private:
   float _yaw_des;
 
   float _roll_des;
-  float _pitch_des;
+  float _pitch_des = 0;
 
   float _x_vel_des = 0.;
   float _y_vel_des = 0.;
+  float _z_vel_des = 0.;
 
   // High speed running
   //float _body_height = 0.34;
@@ -141,6 +145,7 @@ private:
   OffsetDurationGait trotting, bounding, pronking, jumping, galloping, standing, trotRunning, walking, walking2, pacing;
   MixedFrequncyGait random, random2;
   Mat3<float> Kp, Kd, Kp_stance, Kd_stance;
+  //RobotState robotst;
   bool firstRun = true;
   bool firstSwing[4];
   float swingTimeRemaining[4];
@@ -149,6 +154,7 @@ private:
   int gaitNumber;
 
   Vec3<float> world_position_desired;
+  //float heightadd = 0.5;
   Vec3<float> rpy_int;
   Vec3<float> rpy_comp;
   float x_comp_integral = 0;
@@ -162,7 +168,11 @@ private:
   vectorAligned<Vec12<double>> _sparseTrajectory;
 
   SparseCMPC _sparseCMPC;
-
+  double zpos_sum = 0;
+  //bool ascending = false;
+  float Pframp = 0;
+  float pitch_ascension = -0.459;
+  float pitch_descension = -pitch_ascension;
 };
 
 

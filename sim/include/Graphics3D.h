@@ -11,7 +11,7 @@
 #include "DrawList.h"
 #include "Math/FirstOrderIIRFilter.h"
 #include "obj_loader.h"
-#include <GL/glut.h>
+
 #include <QMatrix4x4>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
@@ -21,7 +21,7 @@
 #include <QPainter>
 #include <QWindow>
 #include "SimUtilities/VisualizationData.h"
-#include "vector"
+
 #include <QDateTime>
 #include <QMouseEvent>
 #include <QScreen>
@@ -29,11 +29,10 @@
 
 #include <mutex>
 #include "GameController.h"
-#include "traversability_float_t.hpp"
 
 class Graphics3D : public QOpenGLWidget, protected QOpenGLFunctions {
   Q_OBJECT
- friend class SimControlPanel;friend class Simulation;
+ friend class SimControlPanel;
  public:
   explicit Graphics3D(QWidget *parent = 0);
   virtual ~Graphics3D();
@@ -89,12 +88,9 @@ class Graphics3D : public QOpenGLWidget, protected QOpenGLFunctions {
   bool show_robot = true;
 
  private:
-//    lcm::LCM _gradphLCM;
-
   GameController _gameController;
   GamepadCommand _driverCommand;
-  DynamicsSimulator<double> *_simulator ;
-//  Graphics3D* _window = nullptr;
+
   std::mutex _gfxMutex;
   void scrollGround();
   void updateCameraMatrix();
@@ -102,21 +98,17 @@ class Graphics3D : public QOpenGLWidget, protected QOpenGLFunctions {
   void configOpenGLPass(int pass);
   void _BoxObstacleDrawing();
   void _MeshObstacleDrawing();
-  void _DrawBox(double depth, double width, double height, float color[3]);
+  void _DrawBox(double depth, double width, double height);
   void _Additional_Drawing(int pass);
   void _DrawContactForce();
   void _DrawContactPoint();
-  void _DrawNEXTContactPoint();//1120
+
   void _drawArrow(ArrowVisualization &arrow);
   void _drawBlock(BlockVisualization &box);
   void _drawSphere(SphereVisualization &sphere);
   void _drawCone(ConeVisualization &cone);
   void _drawMesh(MeshVisualization &mesh);
-  void _drawboxheightmap();
-  void drawCollisionBox(double mu, double resti, double depth,
-                                     double width, double height,
-                                     const Vec3<double>& pos,
-                                     const Mat3<double>& ori);
+  
   void _rotateZtoDirection(const Vec3<float> &direction);
   void _setColor(const Vec4<float> &color) {
     glColor4f(color(0), color(1), color(2), color(3));
@@ -127,6 +119,7 @@ class Graphics3D : public QOpenGLWidget, protected QOpenGLFunctions {
   void _drawArrow(const Vec3<float> &base, const Vec3<float> &direction,
                   float lineWidth, float headWidth, float headLength);
   bool _animating;
+
   // attributes for shader program
   GLuint _posAttrColorArray;        // position of vertex
   GLuint _colAttrColorArray;        // color of vertex
@@ -160,7 +153,7 @@ class Graphics3D : public QOpenGLWidget, protected QOpenGLFunctions {
   float _ry = -34;
   float _pixel_to_rad = .3f;
   float _zoom = 3.0;
-  int draw_speed;
+
   bool _rotOrig = true;
   bool _turbo = false;
   bool _sloMo = false;
@@ -197,15 +190,12 @@ class Graphics3D : public QOpenGLWidget, protected QOpenGLFunctions {
   size_t y_size = 100;
   DMat<float> _map;
   DMat<int> _idx_map;
-  DMat<float> idx_map;//1112
   Vec3<float> _pos;
 
   bool _heightmap_data_update = false;
   bool _indexmap_data_update = false;
-  bool _footstep_update=false;
+  
   Vec3<float> _vel_cmd_dir, _vel_cmd_pos;
-  float _x_pos[4],_y_pos[4],_z_pos[4];//1112
-  float last_x[4],last_y[4],last_z[4];//1112
   bool _vel_cmd_update = false;
 
   vectorAligned< Vec3<double> > _obs_list;

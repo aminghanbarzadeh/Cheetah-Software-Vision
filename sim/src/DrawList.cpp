@@ -317,7 +317,7 @@ void DrawList::buildDrawList() {
 
 void DrawList::addBox(double depth, double width, double height,
                       const Vec3<double>& pos, const Mat3<double>& ori,
-                      bool transparent, const Vec4<float>& score) {
+                      bool transparent) {
   if (transparent) {
     BoxInfo tmp;
     tmp.depth = depth;
@@ -337,7 +337,7 @@ void DrawList::addBox(double depth, double width, double height,
     for (size_t i(0); i < 3; ++i) tmp.frame[12 + i] = pos[i];
 
     _box_list.push_back(tmp);
-  } else {//不透明
+  } else {
     QMatrix4x4 offset;
 
     // scale box
@@ -355,9 +355,8 @@ void DrawList::addBox(double depth, double width, double height,
     _kinematicXform.push_back(offset);
 
     SolidColor boxColor;
-//    boxColor.rgba = Vec4<float>(disgustingGreen[0], disgustingGreen[1],
-//                                disgustingGreen[2], 1.f);
-    boxColor.rgba = score;//Vec4<float>(0.7f,0.7f,0.7f, 1.f);
+    boxColor.rgba = Vec4<float>(disgustingGreen[0], disgustingGreen[1],
+                                disgustingGreen[2], 1.f);
     boxColor.useSolidColor = true;
     _instanceColor.push_back(boxColor);
 

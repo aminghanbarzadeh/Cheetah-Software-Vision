@@ -59,6 +59,11 @@ void DesiredStateCommand<T>::convertToStateCommands() {
     joystickLeft = gamepadCommand->leftStickAnalog;
     joystickRight = gamepadCommand->rightStickAnalog;
     trigger_pressed = gamepadCommand->a;
+    ascending_trigger = gamepadCommand->x;
+    descending_trigger = gamepadCommand->y;
+    //ground_trigger = gamepadCommand->b;
+    cancel_trigger = gamepadCommand->rightBumper;
+    
   }
   // Warning!!!!
   // Recommend not to use stateDes

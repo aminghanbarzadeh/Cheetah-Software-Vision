@@ -7,20 +7,17 @@
 
 #include "Graphics3D.h"
 #include "Utilities/utilities.h"
-#include "DrawList.h"
-#include <Dynamics/DynamicsSimulator.h>
-#include <unistd.h>
-#include <iostream>
+
 #ifdef linux
 #include <GL/glut.h>
-#include <GL/gl.h>
-
 #endif
 
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #endif
 
+#include <unistd.h>
+#include <iostream>
 
 // background color
 static constexpr auto clearColor = windows2000;
@@ -85,43 +82,42 @@ void main() {
  * Initialize a 3D visualization window
  */
 Graphics3D::Graphics3D(QWidget *parent)
-        : QOpenGLWidget(parent),
-          _animating(false),
-          _colorArrayProgram(0),
-          _frame(0),
-          _v0(0, 0, 0),
-          _freeCamFilter(1, 60, _v0)
+    : QOpenGLWidget(parent),
+      _animating(false),
+      _colorArrayProgram(0),
+      _frame(0),
+      _v0(0, 0, 0),
+      _freeCamFilter(1, 60, _v0)
 {
-    std::cout << "[SIM GRAPHICS] New graphics window. \n";
+  std::cout << "[SIM GRAPHICS] New graphics window. \n";
 
-    _r[0] = 0.2422;
-    _g[0] = 0.1504;
-    _b[0] = 0.6603;
-    _r[1] = 0.2810;
-    _g[1] = 0.3228;
-    _b[1] = 0.9579;
-    _r[2] = 0.1786;
-    _g[2] = 0.5289;
-    _b[2] = 0.9682;
-    _r[3] = 0.0689;
-    _g[3] = 0.6948;
-    _b[3] = 0.8394;
-    _r[4] = 0.2161;
-    _g[4] = 0.7843;
-    _b[4] = 0.5923;
-    _r[5] = 0.6720;
-    _g[5] = 0.7793;
-    _b[5] = 0.2227;
-    _r[6] = 0.9970;
-    _g[6] = 0.7659;
-    _b[6] = 0.2199;
-    _r[7] = 0.9769;
-    _g[7] = 0.9839;
-    _b[7] = 0.0805;
+  _r[0] = 0.2422;
+  _g[0] = 0.1504;
+  _b[0] = 0.6603;
+  _r[1] = 0.2810;
+  _g[1] = 0.3228;
+  _b[1] = 0.9579;
+  _r[2] = 0.1786;
+  _g[2] = 0.5289;
+  _b[2] = 0.9682;
+  _r[3] = 0.0689;
+  _g[3] = 0.6948;
+  _b[3] = 0.8394;
+  _r[4] = 0.2161;
+  _g[4] = 0.7843;
+  _b[4] = 0.5923;
+  _r[5] = 0.6720;
+  _g[5] = 0.7793;
+  _b[5] = 0.2227;
+  _r[6] = 0.9970;
+  _g[6] = 0.7659;
+  _b[6] = 0.2199;
+  _r[7] = 0.9769;
+  _g[7] = 0.9839;
+  _b[7] = 0.0805;
 
-    _map = DMat<float>::Zero(x_size, y_size);
-    _idx_map = DMat<int>::Zero(x_size, y_size);
-    idx_map = DMat<float>::Zero(x_size, y_size);//1112
+  _map = DMat<float>::Zero(x_size, y_size);
+  _idx_map = DMat<int>::Zero(x_size, y_size);
 }
 
 Graphics3D::~Graphics3D() {}
@@ -141,88 +137,88 @@ size_t Graphics3D::setupMiniCheetah(Vec4<float> color, bool useOld, bool canHide
  */
 
 void Graphics3D::updateCameraMatrix() {
-    _cameraMatrix.setToIdentity();
-    Vec3<float> cameraPos;
-    cameraPos.setZero();
-    _cameraMatrix.perspective(
-            60.f, float(size().width()) / float(size().height()), .001f, 50.f);
+  _cameraMatrix.setToIdentity();
+  Vec3<float> cameraPos;
+  cameraPos.setZero();
+  _cameraMatrix.perspective(
+      60.f, float(size().width()) / float(size().height()), .001f, 50.f);
 
-    if (_arrowsPressed[0]) _ry -= _targetSpeed / 2.f;
-    if (_arrowsPressed[1]) _ry += _targetSpeed / 2.f;
-    if (_arrowsPressed[2]) _rx += _targetSpeed / 2.f;
-    if (_arrowsPressed[3]) _rx -= _targetSpeed / 2.f;
-    if (!_rotOrig) {
-        _ry = coerce<float>(_ry, -180, 0);
-        // velocity in camera coordinates
-        // we want the inverse transformation (coordinateRotation goes the opposite
-        // way as QMatrix.rotate())
-        RotMat<float> R =
-                coordinateRotation<float>(CoordinateAxis::Z, deg2rad(_rx)) *
-                coordinateRotation<float>(CoordinateAxis::X, deg2rad(_ry));
-        Vec3<float> v(_freeCamMove[0], _freeCamMove[1], _freeCamMove[2]);
-        v = R * v;
+  if (_arrowsPressed[0]) _ry -= _targetSpeed / 2.f;
+  if (_arrowsPressed[1]) _ry += _targetSpeed / 2.f;
+  if (_arrowsPressed[2]) _rx += _targetSpeed / 2.f;
+  if (_arrowsPressed[3]) _rx -= _targetSpeed / 2.f;
+  if (!_rotOrig) {
+    _ry = coerce<float>(_ry, -180, 0);
+    // velocity in camera coordinates
+    // we want the inverse transformation (coordinateRotation goes the opposite
+    // way as QMatrix.rotate())
+    RotMat<float> R =
+        coordinateRotation<float>(CoordinateAxis::Z, deg2rad(_rx)) *
+        coordinateRotation<float>(CoordinateAxis::X, deg2rad(_ry));
+    Vec3<float> v(_freeCamMove[0], _freeCamMove[1], _freeCamMove[2]);
+    v = R * v;
 
-        // integrate and filter
-        _freeCamFilter.update(v);
-        for (size_t i = 0; i < 3; i++)
-            _freeCamPos[i] += _frameTime * _freeCamFilter.get()[i];
+    // integrate and filter
+    _freeCamFilter.update(v);
+    for (size_t i = 0; i < 3; i++)
+      _freeCamPos[i] += _frameTime * _freeCamFilter.get()[i];
 
-        // apply
-        _cameraMatrix.rotate(_ry, 1, 0, 0);
-        _cameraMatrix.rotate(_rx, 0, 0, 1);
-        _cameraMatrix.translate(_freeCamPos[0], _freeCamPos[1], _freeCamPos[2]);
-        cameraPos = Vec3<float>(_freeCamPos[0], _freeCamPos[1], 0);
-    } else {
-        _cameraMatrix.translate(0.f, 0.f, -.45f * _zoom);
-        _cameraMatrix.rotate(_ry, 1, 0, 0);
-        _cameraMatrix.rotate(_rx, 0, 0, 1);
-        _cameraTarget = _cameraTarget * 0.9 + _drawList.getCameraOrigin() * 0.1;
-        _cameraMatrix.translate(-_cameraTarget[0],
-                                -_cameraTarget[1], 0);
-        cameraPos = Vec3<float>(-_cameraTarget[0],
-                                -_cameraTarget[1], 0);
-    }
+    // apply
+    _cameraMatrix.rotate(_ry, 1, 0, 0);
+    _cameraMatrix.rotate(_rx, 0, 0, 1);
+    _cameraMatrix.translate(_freeCamPos[0], _freeCamPos[1], _freeCamPos[2]);
+    cameraPos = Vec3<float>(_freeCamPos[0], _freeCamPos[1], 0);
+  } else {
+    _cameraMatrix.translate(0.f, 0.f, -.45f * _zoom);
+    _cameraMatrix.rotate(_ry, 1, 0, 0);
+    _cameraMatrix.rotate(_rx, 0, 0, 1);
+    _cameraTarget = _cameraTarget * 0.9 + _drawList.getCameraOrigin() * 0.1;
+    _cameraMatrix.translate(-_cameraTarget[0],
+                            -_cameraTarget[1], 0);
+    cameraPos = Vec3<float>(-_cameraTarget[0],
+                            -_cameraTarget[1], 0);
+  }
 
-    _drawList.doScrolling(cameraPos);
+  _drawList.doScrolling(cameraPos);
 }
 
 void Graphics3D::initializeGL() {
-    std::cout << "[Graphics3D] Initialize OpenGL...\n";
-    _cameraTarget.setZero();
-    initializeOpenGLFunctions();
-    // create GPU shaders
-    _colorArrayProgram = new QOpenGLShaderProgram(this);
-    _colorArrayProgram->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                                vertexShaderSourceColorArray);
-    _colorArrayProgram->addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                                fragmentShaderSource);
-    _colorArrayProgram->link();
+  std::cout << "[Graphics3D] Initialize OpenGL...\n";
+  _cameraTarget.setZero();
+  initializeOpenGLFunctions();
+  // create GPU shaders
+  _colorArrayProgram = new QOpenGLShaderProgram(this);
+  _colorArrayProgram->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                              vertexShaderSourceColorArray);
+  _colorArrayProgram->addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                              fragmentShaderSource);
+  _colorArrayProgram->link();
 
-    _solidColorProgram = new QOpenGLShaderProgram(this);
-    _solidColorProgram->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                                vertexShaderSourceSolidColor);
-    _solidColorProgram->addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                                fragmentShaderSource);
-    _solidColorProgram->link();
+  _solidColorProgram = new QOpenGLShaderProgram(this);
+  _solidColorProgram->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                              vertexShaderSourceSolidColor);
+  _solidColorProgram->addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                              fragmentShaderSource);
+  _solidColorProgram->link();
 
-    // setup attributes/uniforms (inputs to shaders)
-    _posAttrColorArray = (GLuint)_colorArrayProgram->attributeLocation("posAttr");
-    _colAttrColorArray = (GLuint)_colorArrayProgram->attributeLocation("colAttr");
-    _normAttrColorArray =
-            (GLuint)_colorArrayProgram->attributeLocation("normAttr");
-    _matrixUniformColorArray =
-            (GLuint)_colorArrayProgram->uniformLocation("matrix");
+  // setup attributes/uniforms (inputs to shaders)
+  _posAttrColorArray = (GLuint)_colorArrayProgram->attributeLocation("posAttr");
+  _colAttrColorArray = (GLuint)_colorArrayProgram->attributeLocation("colAttr");
+  _normAttrColorArray =
+      (GLuint)_colorArrayProgram->attributeLocation("normAttr");
+  _matrixUniformColorArray =
+      (GLuint)_colorArrayProgram->uniformLocation("matrix");
 
-    _posAttrSolidColor = (GLuint)_solidColorProgram->attributeLocation("posAttr");
-    _colUniformSolidColor =
-            (GLuint)_solidColorProgram->uniformLocation("colUniform");
-    _colAttrSolidColor = (GLuint)_solidColorProgram->attributeLocation("colAttr");
-    _matrixUniformSolidColor =
-            (GLuint)_solidColorProgram->attributeLocation("normAttr");
-    _normAttrSolidColor = (GLuint)_solidColorProgram->uniformLocation("matrix");
+  _posAttrSolidColor = (GLuint)_solidColorProgram->attributeLocation("posAttr");
+  _colUniformSolidColor =
+      (GLuint)_solidColorProgram->uniformLocation("colUniform");
+  _colAttrSolidColor = (GLuint)_solidColorProgram->attributeLocation("colAttr");
+  _matrixUniformSolidColor =
+      (GLuint)_solidColorProgram->attributeLocation("normAttr");
+  _normAttrSolidColor = (GLuint)_solidColorProgram->uniformLocation("matrix");
 
-    // set clear color:
-    glClearColor(clearColor[0], clearColor[1], clearColor[2], 0.f);
+  // set clear color:
+  glClearColor(clearColor[0], clearColor[1], clearColor[2], 0.f);
 }
 
 /*-----------------------------------------*
@@ -230,129 +226,129 @@ void Graphics3D::initializeGL() {
  *-----------------------------------------*/
 
 void Graphics3D::mousePressEvent(QMouseEvent *event) {
-    _orbiting = true;
-    _orbiting_x_start = event->pos().x();
-    _orbiting_y_start = event->pos().y();
-    _rx_base = _rx;
-    _ry_base = _ry;
+  _orbiting = true;
+  _orbiting_x_start = event->pos().x();
+  _orbiting_y_start = event->pos().y();
+  _rx_base = _rx;
+  _ry_base = _ry;
 }
 
 void Graphics3D::mouseMoveEvent(QMouseEvent *event) {
-    if (!_orbiting) return;
-    _rx = _rx_base + _pixel_to_rad * (event->pos().x() - _orbiting_x_start);
-    _ry = _ry_base + _pixel_to_rad * (event->pos().y() - _orbiting_y_start);
+  if (!_orbiting) return;
+  _rx = _rx_base + _pixel_to_rad * (event->pos().x() - _orbiting_x_start);
+  _ry = _ry_base + _pixel_to_rad * (event->pos().y() - _orbiting_y_start);
 }
 
 void Graphics3D::mouseReleaseEvent(QMouseEvent *event) {
-    _orbiting = false;
-    _rx_base = _rx_base + _pixel_to_rad * (event->pos().x() - _orbiting_x_start);
-    _ry_base = _ry_base + _pixel_to_rad * (event->pos().y() - _orbiting_y_start);
+  _orbiting = false;
+  _rx_base = _rx_base + _pixel_to_rad * (event->pos().x() - _orbiting_x_start);
+  _ry_base = _ry_base + _pixel_to_rad * (event->pos().y() - _orbiting_y_start);
 }
 
 void Graphics3D::wheelEvent(QWheelEvent *e) {
-    if (e->angleDelta().y() > 0) {
-        if (_zoom > .1) _zoom = 0.8f * _zoom;
-    } else {
-        if (_zoom < 100) _zoom = 1.2f * _zoom;
-    }
+  if (e->angleDelta().y() > 0) {
+    if (_zoom > .1) _zoom = 0.8f * _zoom;
+  } else {
+    if (_zoom < 100) _zoom = 1.2f * _zoom;
+  }
 }
 
 void Graphics3D::keyPressEvent(QKeyEvent *e) {
-    if (e->key() == Qt::Key_Control) {
-        _targetSpeed *= .5f;
-    } else if (e->key() == Qt::Key_Shift) {
-        _targetSpeed *= 2.f;
-    }
-    if (e->key() == Qt::Key_W)
-        _freeCamMove[2] = _targetSpeed;
-    else if (e->key() == Qt::Key_S)
-        _freeCamMove[2] = -_targetSpeed;
+  if (e->key() == Qt::Key_Control) {
+    _targetSpeed *= .5f;
+  } else if (e->key() == Qt::Key_Shift) {
+    _targetSpeed *= 2.f;
+  }
+  if (e->key() == Qt::Key_W)
+    _freeCamMove[2] = _targetSpeed;
+  else if (e->key() == Qt::Key_S)
+    _freeCamMove[2] = -_targetSpeed;
 
-    if (e->key() == Qt::Key_A)
-        _freeCamMove[0] = _targetSpeed;
-    else if (e->key() == Qt::Key_D)
-        _freeCamMove[0] = -_targetSpeed;
+  if (e->key() == Qt::Key_A)
+    _freeCamMove[0] = _targetSpeed;
+  else if (e->key() == Qt::Key_D)
+    _freeCamMove[0] = -_targetSpeed;
 
-    if (e->key() == Qt::Key_R)
-        _freeCamMove[1] = -_targetSpeed;
-    else if (e->key() == Qt::Key_F)
-        _freeCamMove[1] = _targetSpeed;
+  if (e->key() == Qt::Key_R)
+    _freeCamMove[1] = -_targetSpeed;
+  else if (e->key() == Qt::Key_F)
+    _freeCamMove[1] = _targetSpeed;
 
-    if (e->key() == Qt::Key_Up)
-        _arrowsPressed[0] = true;
-    else if (e->key() == Qt::Key_Down)
-        _arrowsPressed[1] = true;
+  if (e->key() == Qt::Key_Up)
+    _arrowsPressed[0] = true;
+  else if (e->key() == Qt::Key_Down)
+    _arrowsPressed[1] = true;
 
-    if (e->key() == Qt::Key_Right)
-        _arrowsPressed[2] = true;
-    else if (e->key() == Qt::Key_Left)
-        _arrowsPressed[3] = true;
+  if (e->key() == Qt::Key_Right)
+    _arrowsPressed[2] = true;
+  else if (e->key() == Qt::Key_Left)
+    _arrowsPressed[3] = true;
 
-    if (e->key() == Qt::Key_V) {
-        if (_pause)
-            _pause = false;
-        else
-            _pause = true;
-    }
+  if (e->key() == Qt::Key_V) {
+    if (_pause)
+      _pause = false;
+    else
+      _pause = true;
+  }
 
-    if(e->key() == Qt::Key_T) {
-        _turbo = true;
-    }
+  if(e->key() == Qt::Key_T) {
+    _turbo = true;
+  }
 
-    if(e->key() == Qt::Key_P) {
-        _sloMo = true;
-    }
+  if(e->key() == Qt::Key_P) {
+    _sloMo = true;
+  }
 
-    if (e->key() == Qt::Key_Tab) {
-        _freeCamPos[0] = 0.f;
-        _freeCamPos[1] = 0.f;
-        _freeCamPos[2] = 0.f;
-        _rx = 0.f;
-        _ry = 0.f;
-    }
+  if (e->key() == Qt::Key_Tab) {
+    _freeCamPos[0] = 0.f;
+    _freeCamPos[1] = 0.f;
+    _freeCamPos[2] = 0.f;
+    _rx = 0.f;
+    _ry = 0.f;
+  }
 }
 
 void Graphics3D::keyReleaseEvent(QKeyEvent *e) {
-    if (e->key() == Qt::Key_Control) {
-        _targetSpeed /= .5f;
-    } else if (e->key() == Qt::Key_Shift) {
-        _targetSpeed /= 2.f;
-    } else if (e->key() == Qt::Key_Space) {
-        _rotOrig = !_rotOrig;
-    }
+  if (e->key() == Qt::Key_Control) {
+    _targetSpeed /= .5f;
+  } else if (e->key() == Qt::Key_Shift) {
+    _targetSpeed /= 2.f;
+  } else if (e->key() == Qt::Key_Space) {
+    _rotOrig = !_rotOrig;
+  }
 
-    if (e->key() == Qt::Key_W)
-        _freeCamMove[2] = 0;
-    else if (e->key() == Qt::Key_S)
-        _freeCamMove[2] = 0;
+  if (e->key() == Qt::Key_W)
+    _freeCamMove[2] = 0;
+  else if (e->key() == Qt::Key_S)
+    _freeCamMove[2] = 0;
 
-    if (e->key() == Qt::Key_A)
-        _freeCamMove[0] = 0;
-    else if (e->key() == Qt::Key_D)
-        _freeCamMove[0] = 0;
+  if (e->key() == Qt::Key_A)
+    _freeCamMove[0] = 0;
+  else if (e->key() == Qt::Key_D)
+    _freeCamMove[0] = 0;
 
-    if (e->key() == Qt::Key_R)
-        _freeCamMove[1] = 0;
-    else if (e->key() == Qt::Key_F)
-        _freeCamMove[1] = 0;
+  if (e->key() == Qt::Key_R)
+    _freeCamMove[1] = 0;
+  else if (e->key() == Qt::Key_F)
+    _freeCamMove[1] = 0;
 
-    if (e->key() == Qt::Key_Up)
-        _arrowsPressed[0] = false;
-    else if (e->key() == Qt::Key_Down)
-        _arrowsPressed[1] = false;
+  if (e->key() == Qt::Key_Up)
+    _arrowsPressed[0] = false;
+  else if (e->key() == Qt::Key_Down)
+    _arrowsPressed[1] = false;
 
-    if (e->key() == Qt::Key_Right)
-        _arrowsPressed[2] = false;
-    else if (e->key() == Qt::Key_Left)
-        _arrowsPressed[3] = false;
+  if (e->key() == Qt::Key_Right)
+    _arrowsPressed[2] = false;
+  else if (e->key() == Qt::Key_Left)
+    _arrowsPressed[3] = false;
 
-    if(e->key() == Qt::Key_T) {
-        _turbo = false;
-    }
+  if(e->key() == Qt::Key_T) {
+    _turbo = false;
+  }
 
-    if(e->key() == Qt::Key_P) {
-        _sloMo = false;
-    }
+  if(e->key() == Qt::Key_P) {
+    _sloMo = false;
+  }
 }
 
 /*!
@@ -361,108 +357,67 @@ void Graphics3D::keyReleaseEvent(QKeyEvent *e) {
 void Graphics3D::setAnimating(bool animating) { _animating = animating; }
 
 void Graphics3D::renderDrawlist() {
-    // reload if needed
-    if (_drawList.needsReload()) {
-        // upload data
+  // reload if needed
+  if (_drawList.needsReload()) {
+    // upload data
 
-        glDisableVertexAttribArray(2);
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(0);
 
-        glGenBuffers(3, _buffID);
-
-        glBindBuffer(GL_ARRAY_BUFFER, _buffID[0]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * _drawList.getSizeOfAllData(),
-                     _drawList.getVertexArray(), GL_STATIC_DRAW);
-        glVertexAttribPointer(_posAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, _buffID[1]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * _drawList.getSizeOfAllData(),
-                     _drawList.getColorArray(), GL_STATIC_DRAW);
-        glVertexAttribPointer(_colAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, _buffID[2]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * _drawList.getSizeOfAllData(),
-                     _drawList.getNormalArray(), GL_STATIC_DRAW);
-        glVertexAttribPointer(_normAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glEnableVertexAttribArray(2);
-        printf("[Graphics 3D] Uploaded data (%f MB)\n",
-               _drawList.getGLDataSizeMB());
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
-
-    // draw objects with color arrays
-    if(show_floor) {
-        _colorArrayProgram->bind();
-
-        glBindBuffer(GL_ARRAY_BUFFER, _buffID[0]);
-        glVertexAttribPointer(_posAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glBindBuffer(GL_ARRAY_BUFFER, _buffID[1]);
-        glVertexAttribPointer(_colAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glBindBuffer(GL_ARRAY_BUFFER, _buffID[2]);
-        glVertexAttribPointer(_normAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glEnableVertexAttribArray(2);
-
-        for (size_t id = 0; id < _drawList.getNumObjectsToDraw(); id++) {
-            //printf("colored object # %ld %d %d\n", id, _drawList.getCanBeHidden(id), show_robot);
-            if(!_drawList.getCanBeHidden(id) || show_robot) {
-                if (_drawList._instanceColor[id].useSolidColor) {
-                } else {
-                    _colorArrayProgram->setUniformValue(
-                            _matrixUniformColorArray,
-                            _cameraMatrix * _drawList.getModelKinematicTransform(id) *
-                            _drawList.getModelBaseTransform(id));
-
-                    glDrawArrays(GL_TRIANGLES, _drawList.getGLDrawArrayOffset(id) / 3,
-                                 _drawList.getGLDrawArraySize(id) / 3);
-                }
-            }
-        }
-        glDisableVertexAttribArray(2);
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        _colorArrayProgram->release();
-    }
-
-
-    // draw objects without color arrays
-    _solidColorProgram->bind();
+    glGenBuffers(3, _buffID);
 
     glBindBuffer(GL_ARRAY_BUFFER, _buffID[0]);
-    glVertexAttribPointer(_posAttrSolidColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * _drawList.getSizeOfAllData(),
+                 _drawList.getVertexArray(), GL_STATIC_DRAW);
+    glVertexAttribPointer(_posAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
     glBindBuffer(GL_ARRAY_BUFFER, _buffID[1]);
-    glVertexAttribPointer(_colAttrSolidColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * _drawList.getSizeOfAllData(),
+                 _drawList.getColorArray(), GL_STATIC_DRAW);
+    glVertexAttribPointer(_colAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
     glBindBuffer(GL_ARRAY_BUFFER, _buffID[2]);
-    glVertexAttribPointer(_normAttrSolidColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * _drawList.getSizeOfAllData(),
+                 _drawList.getNormalArray(), GL_STATIC_DRAW);
+    glVertexAttribPointer(_normAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
-    for (size_t id = 0; id < _drawList.getNumObjectsToDraw(); id++) {
-        //printf("solid object # %ld %d %d\n", id, _drawList.getCanBeHidden(id), show_robot);
-        if(!_drawList.getCanBeHidden(id) || show_robot) {
-            if (_drawList._instanceColor[id].useSolidColor) {
-                _solidColorProgram->setUniformValue(
-                        _matrixUniformSolidColor,
-                        _cameraMatrix * _drawList.getModelKinematicTransform(id) *
-                        _drawList.getModelBaseTransform(id));
-                auto &col = _drawList._instanceColor[id];
-                _solidColorProgram->setUniformValue(
-                        _colUniformSolidColor,
-                        QVector4D(col.rgba[0], col.rgba[1], col.rgba[2], col.rgba[3]));
+    printf("[Graphics 3D] Uploaded data (%f MB)\n",
+           _drawList.getGLDataSizeMB());
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
 
-                glDrawArrays(GL_TRIANGLES, _drawList.getGLDrawArrayOffset(id) / 3,
-                             _drawList.getGLDrawArraySize(id) / 3);
-            } else {
-            }
+  // draw objects with color arrays
+  if(show_floor) {
+      _colorArrayProgram->bind();
+
+  glBindBuffer(GL_ARRAY_BUFFER, _buffID[0]);
+  glVertexAttribPointer(_posAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, _buffID[1]);
+  glVertexAttribPointer(_colAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, _buffID[2]);
+  glVertexAttribPointer(_normAttrColorArray, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+  glEnableVertexAttribArray(2);
+
+  for (size_t id = 0; id < _drawList.getNumObjectsToDraw(); id++) {
+    //printf("colored object # %ld %d %d\n", id, _drawList.getCanBeHidden(id), show_robot);
+    if(!_drawList.getCanBeHidden(id) || show_robot) {
+      if (_drawList._instanceColor[id].useSolidColor) {
+      } else {
+          _colorArrayProgram->setUniformValue(
+            _matrixUniformColorArray,
+            _cameraMatrix * _drawList.getModelKinematicTransform(id) *
+                _drawList.getModelBaseTransform(id));
+
+          glDrawArrays(GL_TRIANGLES, _drawList.getGLDrawArrayOffset(id) / 3,
+                    _drawList.getGLDrawArraySize(id) / 3);
         }
+    }
     }
     glDisableVertexAttribArray(2);
     glDisableVertexAttribArray(1);
@@ -470,772 +425,685 @@ void Graphics3D::renderDrawlist() {
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    _solidColorProgram->release();
+    _colorArrayProgram->release();
+  }
+
+
+  // draw objects without color arrays
+  _solidColorProgram->bind();
+
+  glBindBuffer(GL_ARRAY_BUFFER, _buffID[0]);
+  glVertexAttribPointer(_posAttrSolidColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, _buffID[1]);
+  glVertexAttribPointer(_colAttrSolidColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, _buffID[2]);
+  glVertexAttribPointer(_normAttrSolidColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+  glEnableVertexAttribArray(2);
+  for (size_t id = 0; id < _drawList.getNumObjectsToDraw(); id++) {
+    //printf("solid object # %ld %d %d\n", id, _drawList.getCanBeHidden(id), show_robot);
+    if(!_drawList.getCanBeHidden(id) || show_robot) {
+      if (_drawList._instanceColor[id].useSolidColor) {
+        _solidColorProgram->setUniformValue(
+            _matrixUniformSolidColor,
+            _cameraMatrix * _drawList.getModelKinematicTransform(id) *
+                _drawList.getModelBaseTransform(id));
+        auto &col = _drawList._instanceColor[id];
+        _solidColorProgram->setUniformValue(
+            _colUniformSolidColor,
+            QVector4D(col.rgba[0], col.rgba[1], col.rgba[2], col.rgba[3]));
+
+        glDrawArrays(GL_TRIANGLES, _drawList.getGLDrawArrayOffset(id) / 3,
+                    _drawList.getGLDrawArraySize(id) / 3);
+      } else {
+      }
+    }
+  }
+  glDisableVertexAttribArray(2);
+  glDisableVertexAttribArray(1);
+  glDisableVertexAttribArray(0);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  _solidColorProgram->release();
 }
 
 void Graphics3D::configOpenGLPass(int pass) {
-    switch (pass) {
-        case 0:
-            // clear screen
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  switch (pass) {
+    case 0:
+      // clear screen
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            // update camera math
+      // update camera math
 
-            glDisable(GL_CULL_FACE);
+      glDisable(GL_CULL_FACE);
 
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glEnable(GL_DEPTH_TEST);
-            glDepthFunc(GL_LESS);
-            break;
-        case 1:
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_FRONT);
-            glDepthFunc(GL_ALWAYS);
-            break;
-        case 2:
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_FRONT);
-            glDepthFunc(GL_LEQUAL);
-            break;
-        case 3:
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_BACK);
-            glDepthFunc(GL_ALWAYS);
-            break;
-        case 4:
-            glDisable(GL_CULL_FACE);
-            glDepthFunc(GL_LEQUAL);
-            break;
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glEnable(GL_DEPTH_TEST);
+      glDepthFunc(GL_LESS);
+      break;
+    case 1:
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_FRONT);
+      glDepthFunc(GL_ALWAYS);
+      break;
+    case 2:
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_FRONT);
+      glDepthFunc(GL_LEQUAL);
+      break;
+    case 3:
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      glDepthFunc(GL_ALWAYS);
+      break;
+    case 4:
+      glDisable(GL_CULL_FACE);
+      glDepthFunc(GL_LEQUAL);
+      break;
 
-        default:
-            assert(false);
-    }
+    default:
+      assert(false);
+  }
 }
 
 void Graphics3D::paintGL() {
-    // update joystick:
-    _gameController.updateGamepadCommand(_driverCommand);
-    if (!_animating) return;
-    if (_frame % 60 == 0) {
-        qint64 now = QDateTime::currentMSecsSinceEpoch();
-        _fps = (60.f * 1000.f / (now - last_frame_ms));
-        // std::cout << "FPS: " << _fps << "\n";
-        last_frame_ms = now;
-    }
-    QPainter painter2(this);
-    updateCameraMatrix();
+  // update joystick:
+  _gameController.updateGamepadCommand(_driverCommand);
+  if (!_animating) return;
+  if (_frame % 60 == 0) {
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    _fps = (60.f * 1000.f / (now - last_frame_ms));
+    // std::cout << "FPS: " << _fps << "\n";
+    last_frame_ms = now;
+  }
+  QPainter painter2(this);
+  updateCameraMatrix();
 
-    int passes[] = {0, 1, 2, 3, 4};
-    for (int pass : passes) {
-        // setup pass:
-        glShadeModel(GL_SMOOTH);
-        configOpenGLPass(pass);
+  int passes[] = {0, 1, 2, 3, 4};
+  for (int pass : passes) {
+    // setup pass:
+    glShadeModel(GL_SMOOTH);
+    configOpenGLPass(pass);
 
-        // do rendering on all passes:
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        renderDrawlist();
-        _Additional_Drawing(pass);
-//        _BoxObstacleDrawing();
-    }
-//    _drawboxheightmap();
-// 1020
-//    if(draw_speed==1)
-//    {_drawboxheightmap();draw_speed=0;}
-//    else draw_speed=1;
-//    _MeshObstacleDrawing();
+    // do rendering on all passes:
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    renderDrawlist();
+    _Additional_Drawing(pass);
+    _BoxObstacleDrawing();
+  }
 
-    glDisable(GL_DEPTH_TEST);
-    painter2.setPen(QColor(100, 100, 100, 255));
-    painter2.fillRect(QRect(30, 30, 400, 130), QColor(100, 100, 100, 220));
-    QFont font("Monospace", 20);
-    painter2.setPen(QColor(210, 100, 100));
-    painter2.setFont(font);
-    painter2.drawText(QRect(30, 30, 1000, 1000), Qt::AlignLeft,
-                      QString(infoString));
-    painter2.end();
+  _MeshObstacleDrawing();
 
-    ++_frame;
+  glDisable(GL_DEPTH_TEST);
+  painter2.setPen(QColor(100, 100, 100, 255));
+  painter2.fillRect(QRect(30, 30, 400, 200), QColor(100, 100, 100, 220));
+  QFont font("Monospace", 20);
+  painter2.setPen(QColor(210, 100, 100));
+  painter2.setFont(font);
+  painter2.drawText(QRect(30, 30, 1000, 1000), Qt::AlignLeft,
+                    QString(infoString));
+  painter2.end();
+
+  ++_frame;
 }
 
 void Graphics3D::_drawMesh(MeshVisualization &mesh) {
-//draw any mesh
-    glPushMatrix();
-    glTranslatef(mesh.left_corner[0], mesh.left_corner[1], mesh.left_corner[2]);
 
-    double height_min = mesh.height_max;
-    double height_max = mesh.height_min;
-    double height_gap = height_max - height_min;
-    double scaled_height(0.);
+  glPushMatrix();
+  glTranslatef(mesh.left_corner[0], mesh.left_corner[1], mesh.left_corner[2]);
 
-    float color_r(0.f);
-    float color_g(0.f);
-    float color_b(0.f);
+  double height_min = mesh.height_max;
+  double height_max = mesh.height_min;
+  double height_gap = height_max - height_min;
+  double scaled_height(0.);
 
-    double grid_size(mesh.grid_size);
-    double height;
-    for (int i(0); i < mesh.rows; ++i) {
-        glBegin(GL_LINE_STRIP);
-        glPushAttrib(GL_COLOR_BUFFER_BIT);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  float color_r(0.f);
+  float color_g(0.f);
+  float color_b(0.f);
 
-        for (int j(0); j < mesh.cols; ++j) {
-            height = mesh.height_map(i, j);
-            scaled_height = (height - height_min) / height_gap;
-            getHeightColor(scaled_height, color_r, color_g, color_b);
-//      getHeightColor(height, color_r, color_g, color_b);
-            glColor4f(color_r, color_g, color_b, 1.0f);
-//            glColor4f(0.5, 0.5, 1, 1.0f);
-            glVertex3d(i * grid_size, j * grid_size, height);
-        }
-        glPopAttrib();
-        glDisable(GL_BLEND);
-        glEnd();
-    }
+  double grid_size(mesh.grid_size);
+  double height;
+  for (int i(0); i < mesh.rows; ++i) {
+    glBegin(GL_LINE_STRIP);
+    glPushAttrib(GL_COLOR_BUFFER_BIT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     for (int j(0); j < mesh.cols; ++j) {
-        glBegin(GL_LINE_STRIP);
-        glPushAttrib(GL_COLOR_BUFFER_BIT);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        for (int i(0); i < mesh.rows; ++i) {
-            height = mesh.height_map(i, j);
-            scaled_height = (height - height_min) / height_gap;
-            getHeightColor(scaled_height, color_r, color_g, color_b);
-//      getHeightColor(height, color_r, color_g, color_b);
-            glColor4f(color_r, color_g, color_b, 1.0f);
-//            glColor4f(0.5, 0.5, 1, 1.0f);
-            glVertex3d(i * grid_size, j * grid_size, height);
-        }
-        glPopAttrib();
-        glDisable(GL_BLEND);
-        glEnd();
+      height = mesh.height_map(i, j);
+      scaled_height = (height - height_min) / height_gap;
+      getHeightColor(scaled_height, color_r, color_g, color_b);
+      glColor4f(color_r, color_g, color_b, 1.0f);
+      glVertex3d(i * grid_size, j * grid_size, height);
     }
-    glPopMatrix();
     glPopAttrib();
+    glDisable(GL_BLEND);
+    glEnd();
+  }
+  for (int j(0); j < mesh.cols; ++j) {
+    glBegin(GL_LINE_STRIP);
+    glPushAttrib(GL_COLOR_BUFFER_BIT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (int i(0); i < mesh.rows; ++i) {
+      height = mesh.height_map(i, j);
+      scaled_height = (height - height_min) / height_gap;
+      getHeightColor(scaled_height, color_r, color_g, color_b);
+      glColor4f(color_r, color_g, color_b, 1.0f);
+      glVertex3d(i * grid_size, j * grid_size, height);
+    }
+    glPopAttrib();
+    glDisable(GL_BLEND);
+    glEnd();
+  }
+  glPopMatrix();
+  glPopAttrib();
 }
 
 void Graphics3D::_drawVelArrow(){
-    //glEnable(GL_BLEND);
-    //glDisable(GL_BLEND);
-    //glPushAttrib(GL_COLOR_BUFFER_BIT);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glColor4f(1.f, 0.f, 0.f, 1.0f);
-    _drawArrow(_vel_cmd_pos, _vel_cmd_dir, 0.01, 0.03, 0.055);
-    //glPopAttrib();
+  //glEnable(GL_BLEND);
+  //glDisable(GL_BLEND);
+  //glPushAttrib(GL_COLOR_BUFFER_BIT);
+  //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glColor4f(1.f, 0.f, 0.f, 1.0f);
+  _drawArrow(_vel_cmd_pos, _vel_cmd_dir, 0.01, 0.03, 0.055);
+  //glPopAttrib();
 }
 
-void Graphics3D::_drawObstacleField() {//robot 100 detect field
-    MeshVisualization mesh;
-    double x_obs, y_obs, z_obs;
-    (void)z_obs;
-    double x, y, Prod;
-    vectorAligned<Vec3<double> > obs_list_copy;
-    size_t num_obs = _obs_list.size();
-    //printf("num obs: %lu\n", num_obs);
-    for(size_t i(0); i<num_obs; ++i){
-        obs_list_copy.push_back(_obs_list[i]);
+void Graphics3D::_drawObstacleField() {
+  MeshVisualization mesh;
+  double x_obs, y_obs, z_obs;
+  (void)z_obs;
+  double x, y, Prod;
+  vectorAligned<Vec3<double> > obs_list_copy;
+  size_t num_obs = _obs_list.size();
+  //printf("num obs: %lu\n", num_obs);
+  for(size_t i(0); i<num_obs; ++i){
+    obs_list_copy.push_back(_obs_list[i]);
+  }
+  double grid_size = 0.02;
+  int num_grid = 100; //floor(_obs_sigma*5/grid_size);
+
+  mesh.grid_size = grid_size;
+  mesh.height_max = 0.5;// _obs_height;
+  mesh.height_min = -0.01;
+  mesh.rows = num_grid;
+  mesh.cols = num_grid;
+  mesh.height_map.setZero();
+
+  mesh.left_corner[0] = _vel_cmd_pos[0] - 1.; //x_obs - _obs_sigma*2;
+  mesh.left_corner[1] = _vel_cmd_pos[1] - 1.; //y_obs - _obs_sigma*2;
+  mesh.left_corner[2] = 0.; //z_obs;
+
+
+  for(int row(0); row<num_grid; ++row){
+    for(int col(0); col<num_grid; ++col){
+      for(size_t i(0); i<num_obs; ++i){
+        x_obs = obs_list_copy[i][0];
+        y_obs = obs_list_copy[i][1];
+        z_obs = obs_list_copy[i][2];
+
+        x = row* mesh.grid_size + mesh.left_corner[0];
+        y = col* mesh.grid_size + mesh.left_corner[1];
+        Prod = (x-x_obs)*(x-x_obs) + (y-y_obs)*(y-y_obs); 
+        mesh.height_map(row, col) += exp(-Prod/(2*_obs_sigma*_obs_sigma))*z_obs;
+      }
     }
-    double grid_size = 0.02;
-    int num_grid = 100; //floor(_obs_sigma*5/grid_size);
-
-    mesh.grid_size = grid_size;
-    mesh.height_max = 0.5;// _obs_height;
-    mesh.height_min = -0.01;
-    mesh.rows = num_grid;
-    mesh.cols = num_grid;
-    mesh.height_map.setZero();
-
-// 1013
-    double camera_body_offset = 0.2;
-    mesh.left_corner[0] = _vel_cmd_pos[0] + camera_body_offset; //x_obs - _obs_sigma*2;
-    mesh.left_corner[1] = _vel_cmd_pos[1] - 1.; //y_obs - _obs_sigma*2;
-//  mesh.left_corner[0] = _vel_cmd_pos[0] - 1.; //x_obs - _obs_sigma*2;
-    mesh.left_corner[2] = 0.; //z_obs;
-
-
-    for(int row(0); row<num_grid; ++row){
-        for(int col(0); col<num_grid; ++col){
-            for(size_t i(0); i<num_obs; ++i){
-                x_obs = obs_list_copy[i][0];
-                y_obs = obs_list_copy[i][1];
-                z_obs = obs_list_copy[i][2];
-
-                x = row* mesh.grid_size + mesh.left_corner[0];
-                y = col* mesh.grid_size + mesh.left_corner[1];
-                Prod = (x-x_obs)*(x-x_obs) + (y-y_obs)*(y-y_obs);
-                mesh.height_map(row, col) += exp(-Prod/(2*_obs_sigma*_obs_sigma))*z_obs;
-            }
-        }
-    }
-    //_drawMesh(mesh);
+  }
+  _drawMesh(mesh);
 }
-void Graphics3D::_drawboxheightmap() {
 
-    BlockVisualization box;
-    float pos_x=0,pos_y=0;
+void Graphics3D::_drawHeightMap() {
 
+  glPushAttrib(GL_LIGHTING_BIT);
+  glDisable(GL_LIGHTING);
 
-    box.rpy={0,0,0};
-    for (int i(0); i<_map.rows()-1;++i){
-        for (int j(0); j < _map.cols()-1; ++j) {
-//            if (_map(i,j)>0.02){
-            if (idx_map(i,j)>=0. && idx_map(i,j)<=0.1)
-                box.color={0,0.5,1,1.0};//blue
-            else if (idx_map(i,j)>0.1 && idx_map(i,j)<=1.5)
-                box.color={0,0.5,1,1.0};//blue
-//                    box.color={0.5,1,0,1.0};//green
-            else if (idx_map(i,j)>1.5 && idx_map(i,j)<=3.)
-                box.color={1,1,0,1.0};//yellow
-            else if (idx_map(i,j)>3. && idx_map(i,j)<=5.0)
-                box.color={1,0.5,0,1.0};//orange
-            else if (idx_map(i,j)>5.0)
-                box.color={1,0,0,1.0};//red
-            pos_x=(_map.rows()-i-1)*0.02;
-            pos_y=(_map.cols()-j-1)*0.02;
-//            pos_z=_map(i,j)/2;
-            box.height=_map(i,j);
-            box.dimension(0)=1;// x
-            box.dimension(1)=1;// y
-            box.dimension(2)=1; //z
-//            std::cout<<pos_x<<" "<<pos_y<<" "<<pos_z;
-            box.corner_position={pos_x,pos_y,_map(i,j)/2};
+  glPushMatrix();
+  glTranslatef(-0.75 + _pos[0], -0.75 + _pos[1], 0);
 
-            _drawBlock(box);
-//            double ori[3]={0,.0,0};
-//                Mat3<double> R_box=ori::rpyToRotMat(Vec3<double>(ori));
-//                double pos[3];
-//                pos[0]=pos_x;
-//                pos[1]=pos_y;
-//                pos[2]=0.015; //z
-//            drawCollisionBox(0.7, 0, 0.02, 0.02, 0.03, Vec3<double>(pos), R_box);
-//            }
-        }
-    }
+  double grid_size(0.015);
+  double height;
+  for (int i(0); i < _map.rows(); ++i) {
+    glBegin(GL_LINE_STRIP);
+    glPushAttrib(GL_COLOR_BUFFER_BIT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-}
-void Graphics3D::drawCollisionBox(double mu, double resti, double depth,
-                                  double width, double height,
-                                  const Vec3<double>& pos,
-                                  const Mat3<double>& ori
-) {
-    _simulator->addCollisionBox(mu, resti, depth, width, height, pos, ori);
-//    if ( _window) {
-//        _window->lockGfxMutex();
-//        _window->_drawList.addBox(depth, width, height, pos, ori, transparent);
-//        _window->unlockGfxMutex();
-//    }
-}
-void Graphics3D::_drawHeightMap() {//绘制实时高度图
-
-    glPushAttrib(GL_LIGHTING_BIT);
-    glDisable(GL_LIGHTING);
-
-    glPushMatrix();
-//  glTranslatef(-0.75 + _pos[0], -0.75 + _pos[1], 0);
-    double yaw_angle=(_vel_cmd_pos[2]+3.14)/6.28*360;
-    if (yaw_angle>=0 && yaw_angle<180) yaw_angle=180+yaw_angle;
-    else                               yaw_angle=yaw_angle-180;//180+(_vel_cmd_pos[2]/3.14*180);
-//std::cout<<yaw_angle<<" "<<_vel_cmd_pos[2]<<std::endl;
-    glRotatef(yaw_angle, .0f, .0f, 1.0f);
-    glTranslatef(0.2 + _vel_cmd_pos[0], -1.0 + _vel_cmd_pos[1], 0);//地图相对body的位置
-
-    double grid_size(0.02);//(0.015);//1013
-    double height;
-    for (int i(0); i < _map.rows(); ++i) {
-        glBegin(GL_LINE_STRIP);
-        glPushAttrib(GL_COLOR_BUFFER_BIT);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        for (int j(0); j < _map.cols(); ++j) {
-            height = _map(i, j);
-            //if(_idx_map(i, j) > 0){ printf("%d, %d point: %d\n", i, j, _idx_map(i,j)); }
-//      if(_idx_map(i,j) == 0){
-            if(height == 0) {
-                glColor4f(0.f, 0.5f, 1.f, 1.0f);
-//      }else if(_idx_map(i,j) == 1){
-            }else if(height <0.3 ) {
-                glColor4f(0.2f, 1.0f, 0.5f, 1.0f);
-//      }else if(_idx_map(i,j) == 2){
-            }else if(height <0.6 ){
-                glColor4f(1.f, 1.f, 0.f, 1.0f);
-            }else{
-                glColor4f(1.f, 0.6f, 0.f, 1.0f);
-            }
-            glVertex3d((_map.rows()-i) * grid_size, (_map.cols()-j) * grid_size, height);
-        }
-        glPopAttrib();
-        glDisable(GL_BLEND);
-        glEnd();
-    }
     for (int j(0); j < _map.cols(); ++j) {
-        glBegin(GL_LINE_STRIP);
-        glPushAttrib(GL_COLOR_BUFFER_BIT);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        for (int i(0); i < _map.rows(); ++i) {
-            height = _map(i, j);
-            if(height == 0) {
-                glColor4f(0.f, 0.5f, 1.f, 1.0f);
-            }else if(height <0.3 ) {
-                glColor4f(0.2f, 1.f, 0.5f, 1.0f);
-            }else if(height <0.6 ){
-                glColor4f(1.f, 1.f, 0.f, 1.0f);
-            }else{
-                glColor4f(1.f, 0.6f, 0.f, 1.0f);
-            }
-            glVertex3d((_map.cols()-i) * grid_size, (_map.rows()-j) * grid_size, height);
-        }
-        glPopAttrib();
-        glDisable(GL_BLEND);
-        glEnd();
+      height = _map(i, j);
+      //if(_idx_map(i, j) > 0){ printf("%d, %d point: %d\n", i, j, _idx_map(i,j)); }
+      if(_idx_map(i,j) == 0){
+        glColor4f(0.f, 1.f, 0.f, 1.0f);
+      }else if(_idx_map(i,j) == 1){
+        glColor4f(0.f, 0.f, 1.f, 1.0f);
+      }else if(_idx_map(i,j) == 2){
+        glColor4f(1.f, 0.f, 0.f, 1.0f);
+      }else{
+        glColor4f(1.f, 1.f, 1.f, 1.0f);
+      }
+      glVertex3d(i * grid_size, j * grid_size, height);
     }
-    //glPopAttrib();
-    glPopMatrix();
-    glEnable(GL_LIGHTING);
     glPopAttrib();
+    glDisable(GL_BLEND);
+    glEnd();
+  }
+  for (int j(0); j < _map.cols(); ++j) {
+    glBegin(GL_LINE_STRIP);
+    glPushAttrib(GL_COLOR_BUFFER_BIT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (int i(0); i < _map.rows(); ++i) {
+      height = _map(i, j);
+      if(_idx_map(i,j) == 0){
+        glColor4f(0.f, 1.f, 0.f, 1.0f);
+      }else if(_idx_map(i,j) == 1){
+        glColor4f(0.f, 0.f, 1.f, 1.0f);
+      }else if(_idx_map(i,j) == 2){
+        glColor4f(1.f, 0.f, 0.f, 1.0f);
+      }else{
+        glColor4f(1.f, 1.f, 1.f, 1.0f);
+      }
+      glVertex3d(i * grid_size, j * grid_size, height);
+    }
+    glPopAttrib();
+    glDisable(GL_BLEND);
+    glEnd();
+  }
+  //glPopAttrib();
+  glPopMatrix();
+  glEnable(GL_LIGHTING);
+  glPopAttrib();
 }
 
 void Graphics3D::_MeshObstacleDrawing() {
-//    draw heightmap 333 field
-    glLoadMatrixf(_cameraMatrix.data());
-    glPushAttrib(GL_LIGHTING_BIT);
-    glDisable(GL_LIGHTING);
+  glLoadMatrixf(_cameraMatrix.data());
+  glPushAttrib(GL_LIGHTING_BIT);
+  glDisable(GL_LIGHTING);
 
-    glPushMatrix();
-    glTranslatef(_drawList.getHeightMapLeftCorner()[0],
-                 _drawList.getHeightMapLeftCorner()[1],
-                 _drawList.getHeightMapLeftCorner()[2]);
+  glPushMatrix();
+  glTranslatef(_drawList.getHeightMapLeftCorner()[0],
+               _drawList.getHeightMapLeftCorner()[1],
+               _drawList.getHeightMapLeftCorner()[2]);
 
-//  double height_min = _drawList.getHeightMapMax();
-//  double height_max = _drawList.getHeightMapMin();
-//  double height_gap = height_max - height_min;
-//  double scaled_height(0.);
+  double height_min = _drawList.getHeightMapMax();
+  double height_max = _drawList.getHeightMapMin();
+  double height_gap = height_max - height_min;
+  double scaled_height(0.);
 
-    float color_r(0.f);
-    float color_g(0.f);
-    float color_b(0.f);
+  float color_r(0.f);
+  float color_g(0.f);
+  float color_b(0.f);
 
-    double grid_size(_drawList.getGridSize());
-    double height;
-    for (int i(0); i < _drawList.getHeightMap().rows(); ++i) {
-        glBegin(GL_LINE_STRIP);
-        glPushAttrib(GL_COLOR_BUFFER_BIT);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  double grid_size(_drawList.getGridSize());
+  double height;
+  for (int i(0); i < _drawList.getHeightMap().rows(); ++i) {
+    glBegin(GL_LINE_STRIP);
+    glPushAttrib(GL_COLOR_BUFFER_BIT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        for (int j(0); j < _drawList.getHeightMap().cols(); ++j) {
-            height = _drawList.getHeightMap()(i, j);
-//      scaled_height = (height - height_min) / height_gap;
-//      getHeightColor(scaled_height, color_r, color_g, color_b);
-            getHeightColor(height, color_r, color_g, color_b);
-            glColor4f(color_r, color_g, color_b, 1.0f);
-            glVertex3d(i * grid_size, j * grid_size, height);
-        }
-        glPopAttrib();
-        glDisable(GL_BLEND);
-        glEnd();
-    }
     for (int j(0); j < _drawList.getHeightMap().cols(); ++j) {
-        glBegin(GL_LINE_STRIP);
-        glPushAttrib(GL_COLOR_BUFFER_BIT);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        for (int i(0); i < _drawList.getHeightMap().rows(); ++i) {
-            height = _drawList.getHeightMap()(i, j);
-//      scaled_height = (height - height_min) / height_gap;
-//      getHeightColor(scaled_height, color_r, color_g, color_b);
-            getHeightColor(height, color_r, color_g, color_b);
-            glColor4f(color_r, color_g, color_b, 1.0f);
-            glVertex3d(i * grid_size, j * grid_size, height);
-        }
-        glPopAttrib();
-        glDisable(GL_BLEND);
-        glEnd();
+      height = _drawList.getHeightMap()(i, j);
+      scaled_height = (height - height_min) / height_gap;
+      getHeightColor(scaled_height, color_r, color_g, color_b);
+      glColor4f(color_r, color_g, color_b, 1.0f);
+      glVertex3d(i * grid_size, j * grid_size, height);
     }
-    glPopMatrix();
-    glEnable(GL_LIGHTING);
     glPopAttrib();
+    glDisable(GL_BLEND);
+    glEnd();
+  }
+  for (int j(0); j < _drawList.getHeightMap().cols(); ++j) {
+    glBegin(GL_LINE_STRIP);
+    glPushAttrib(GL_COLOR_BUFFER_BIT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (int i(0); i < _drawList.getHeightMap().rows(); ++i) {
+      height = _drawList.getHeightMap()(i, j);
+      scaled_height = (height - height_min) / height_gap;
+      getHeightColor(scaled_height, color_r, color_g, color_b);
+      glColor4f(color_r, color_g, color_b, 1.0f);
+      glVertex3d(i * grid_size, j * grid_size, height);
+    }
+    glPopAttrib();
+    glDisable(GL_BLEND);
+    glEnd();
+  }
+  glPopMatrix();
+  glEnable(GL_LIGHTING);
+  glPopAttrib();
 }
 
 void Graphics3D::getHeightColor(const double &h, float &r, float &g, float &b) {
-    // 0 :  0.2422    0.1504    0.6603
-    // 1/7:  0.2810    0.3228    0.9579
-    // 2/7: 0.1786    0.5289    0.9682
-    // 3/7: 0.0689    0.6948    0.8394
-    // 4/7: 0.2161    0.7843    0.5923
-    // 5/7: 0.6720    0.7793    0.2227
-    // 6/7: 0.9970    0.7659    0.2199
-    //   1: 0.9769    0.9839    0.0805
-    double step(1. / 7.);
-    if (h > 6 * step) {
-        _SetRGBHeight(h, step, 6, r, g, b);
-    } else if (h > 5 * step) {
-        _SetRGBHeight(h, step, 6, r, g, b);
-    } else if (h > 4 * step) {
-        _SetRGBHeight(h, step, 5, r, g, b);
-    } else if (h > 3 * step) {
-        _SetRGBHeight(h, step, 4, r, g, b);
-    } else if (h > 2 * step) {
-        _SetRGBHeight(h, step, 3, r, g, b);
-    } else if (h > 1 * step) {
-        _SetRGBHeight(h, step, 2, r, g, b);
-    } else if (h > 0 * step) {
-        _SetRGBHeight(h, step, 1, r, g, b);
-    } else{
-        _SetRGBHeight(h, step, 0,r ,g ,b);
-    }
+  // 0 :  0.2422    0.1504    0.6603
+  // 1/7:  0.2810    0.3228    0.9579
+  // 2/7: 0.1786    0.5289    0.9682
+  // 3/7: 0.0689    0.6948    0.8394
+  // 4/7: 0.2161    0.7843    0.5923
+  // 5/7: 0.6720    0.7793    0.2227
+  // 6/7: 0.9970    0.7659    0.2199
+  //   1: 0.9769    0.9839    0.0805
+  double step(1. / 7.);
+  if (h > 6 * step) {
+    _SetRGBHeight(h, step, 6, r, g, b);
+  } else if (h > 5 * step) {
+    _SetRGBHeight(h, step, 5, r, g, b);
+  } else if (h > 4 * step) {
+    _SetRGBHeight(h, step, 4, r, g, b);
+  } else if (h > 3 * step) {
+    _SetRGBHeight(h, step, 3, r, g, b);
+  } else if (h > 2 * step) {
+    _SetRGBHeight(h, step, 2, r, g, b);
+  } else if (h > 1 * step) {
+    _SetRGBHeight(h, step, 1, r, g, b);
+  } else {
+    _SetRGBHeight(h, step, 0, r, g, b);
+  }
 }
 void Graphics3D::_SetRGBHeight(const double &h, const double &step,
                                const int &idx, float &r, float &g, float &b) {
-    double grade = (h - idx * step) / step;
-    r = (_r[idx + 1] - _r[idx]) * grade + _r[idx];
-    g = (_g[idx + 1] - _g[idx]) * grade + _g[idx];
-    b = (_b[idx + 1] - _b[idx]) * grade + _b[idx];
+  double grade = (h - idx * step) / step;
+  r = (_r[idx + 1] - _r[idx]) * grade + _r[idx];
+  g = (_g[idx + 1] - _g[idx]) * grade + _g[idx];
+  b = (_b[idx + 1] - _b[idx]) * grade + _b[idx];
 }
 
 void Graphics3D::_BoxObstacleDrawing() {
-    glLoadMatrixf(_cameraMatrix.data());
-    glPushAttrib(GL_LIGHTING_BIT);
-    glDisable(GL_LIGHTING);
+  glLoadMatrixf(_cameraMatrix.data());
+  glPushAttrib(GL_LIGHTING_BIT);
+  glDisable(GL_LIGHTING);
 
-    size_t nBox = _drawList.getBoxInfoList().size();
-    for (size_t i(0); i < nBox; ++i) {
-        glPushMatrix();
-        glMultMatrixf(_drawList.getBoxInfoList()[i].frame);  // column major
-//        _DrawBox(_drawList.getBoxInfoList()[i].depth,
-//                 _drawList.getBoxInfoList()[i].width,
-//                 _drawList.getBoxInfoList()[i].height);
-        glPopMatrix();
-    }
-
-    glEnable(GL_LIGHTING);
-    glPopAttrib();
+  size_t nBox = _drawList.getBoxInfoList().size();
+  for (size_t i(0); i < nBox; ++i) {
+    glPushMatrix();
+    glMultMatrixf(_drawList.getBoxInfoList()[i].frame);  // column major
+    _DrawBox(_drawList.getBoxInfoList()[i].depth,
+             _drawList.getBoxInfoList()[i].width,
+             _drawList.getBoxInfoList()[i].height);
+    glPopMatrix();
+  }
+  glEnable(GL_LIGHTING);
+  glPopAttrib();
 }
 
-void Graphics3D::_DrawBox(double depth, double width, double height,float color[3]) {
-    double x = depth / 2.0;
-    double y = width / 2.0;
-    double z = height / 2.0;
+void Graphics3D::_DrawBox(double depth, double width, double height) {
+  double x = depth / 2.0;
+  double y = width / 2.0;
+  double z = height / 2.0;
 
-    glPushAttrib(GL_COLOR_BUFFER_BIT);
+  glPushAttrib(GL_COLOR_BUFFER_BIT);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glColor4f(color[0],color[1],color[2], 1.0f);
-//    glutSolidCube(1.0);
-    glBegin(GL_QUADS);//6个面的四个点
-    {
-        glVertex3d(x, y, -z);
-        glVertex3d(-x, y, -z);
-        glVertex3d(-x, y, z);
-        glVertex3d(x, y, z);
+  glColor4f(_color1[0], _color1[1], _color1[2], 0.7f);
 
-        glVertex3d(x, -y, -z);
-        glVertex3d(x, y, -z);
-        glVertex3d(x, y, z);
-        glVertex3d(x, -y, z);
+  glBegin(GL_QUADS);
+  {
+    glVertex3d(x, y, -z);
+    glVertex3d(-x, y, -z);
+    glVertex3d(-x, y, z);
+    glVertex3d(x, y, z);
 
-        glVertex3d(x, -y, z);
-        glVertex3d(-x, -y, z);
-        glVertex3d(-x, -y, -z);
-        glVertex3d(x, -y, -z);
+    glVertex3d(x, -y, -z);
+    glVertex3d(x, y, -z);
+    glVertex3d(x, y, z);
+    glVertex3d(x, -y, z);
 
-        glVertex3d(-x, -y, z);
-        glVertex3d(-x, y, z);
-        glVertex3d(-x, y, -z);
-        glVertex3d(-x, -y, -z);
+    glVertex3d(x, -y, z);
+    glVertex3d(-x, -y, z);
+    glVertex3d(-x, -y, -z);
+    glVertex3d(x, -y, -z);
 
-        glVertex3d(-x, -y, -z);
-        glVertex3d(-x, y, -z);
-        glVertex3d(x, y, -z);
-        glVertex3d(x, -y, -z);
+    glVertex3d(-x, -y, z);
+    glVertex3d(-x, y, z);
+    glVertex3d(-x, y, -z);
+    glVertex3d(-x, -y, -z);
 
-        glVertex3d(-x, -y, z);
-        glVertex3d(x, -y, z);
-        glVertex3d(x, y, z);
-        glVertex3d(-x, y, z);
-    }  // GL_QUADS
-    glEnd();
+    glVertex3d(-x, -y, -z);
+    glVertex3d(-x, y, -z);
+    glVertex3d(x, y, -z);
+    glVertex3d(x, -y, -z);
 
-    glPopAttrib();
-    glDisable(GL_BLEND);
+    glVertex3d(-x, -y, z);
+    glVertex3d(x, -y, z);
+    glVertex3d(x, y, z);
+    glVertex3d(-x, y, z);
+  }  // GL_QUADS
+  glEnd();
+
+  glPopAttrib();
+  glDisable(GL_BLEND);
 }
 
 void Graphics3D::_Additional_Drawing(int pass) {
-    glLoadMatrixf(_cameraMatrix.data());
-    glPushAttrib(GL_LIGHTING_BIT);
-    glDisable(GL_LIGHTING);
+  glLoadMatrixf(_cameraMatrix.data());
+  glPushAttrib(GL_LIGHTING_BIT);
+  glDisable(GL_LIGHTING);
 
-    _DrawContactForce();
-    _DrawContactPoint();
-    _DrawNEXTContactPoint();
+  _DrawContactForce();
+  _DrawContactPoint();
 
-    configOpenGLPass(pass);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  configOpenGLPass(pass);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    for (size_t i = 0; i < _drawList._visualizationData->num_arrows; i++) {
-        _drawArrow(_drawList._visualizationData->arrows[i]);
+  for (size_t i = 0; i < _drawList._visualizationData->num_arrows; i++) {
+    _drawArrow(_drawList._visualizationData->arrows[i]);
+  }
+
+  for (size_t i = 0; i < _drawList._visualizationData->num_cones; i++) {
+    _drawCone(_drawList._visualizationData->cones[i]);
+  }
+
+  for (size_t i = 0; i < _drawList._visualizationData->num_blocks; i++) {
+    _drawBlock(_drawList._visualizationData->blocks[i]);
+  }
+
+  for (size_t i = 0; i < _drawList._visualizationData->num_spheres; i++) {
+    _drawSphere(_drawList._visualizationData->spheres[i]);
+  }
+
+  if(_vel_cmd_update){ _drawVelArrow(); }
+
+  // Pointcloud Drawing
+  if(_pointcloud_data_update){
+    int num_skip = 5;
+    for(size_t i(0); i<_num_points/num_skip; ++i){
+      SphereVisualization sphere;
+      sphere.position = _points[i*num_skip];
+      sphere.color = {1.0, 0.2, 0.2, 1.0};
+      sphere.radius = 0.007;
+      _drawSphere(sphere);
     }
+  }
 
-    for (size_t i = 0; i < _drawList._visualizationData->num_cones; i++) {
-        _drawCone(_drawList._visualizationData->cones[i]);
+
+  glDisable(GL_BLEND);
+  for (size_t i(0); i< _drawList._visualizationData->num_meshes; ++i){
+    _drawMesh(_drawList._visualizationData->meshes[i]);
+  }
+  // Heightmap Drawing
+  if(_obstacle_update){ _drawObstacleField(); }
+  if(_heightmap_data_update){ _drawHeightMap(); }
+
+  for (size_t i = 0; i < _drawList._visualizationData->num_paths; i++) {
+    PathVisualization path = _drawList._visualizationData->paths[i];
+    glColor4f(path.color[0], path.color[1], path.color[2], path.color[3]);
+    glBegin(GL_LINE_STRIP);
+    for (size_t j = 0; j < path.num_points; j++) {
+      glVertex3d(path.position[j][0], path.position[j][1], path.position[j][2]);
     }
+    glEnd();
+  }
 
-    for (size_t i = 0; i < _drawList._visualizationData->num_blocks; i++) {
-        _drawBlock(_drawList._visualizationData->blocks[i]);
-    }
-
-    for (size_t i = 0; i < _drawList._visualizationData->num_spheres; i++) {
-        _drawSphere(_drawList._visualizationData->spheres[i]);
-    }
-
-    if(_vel_cmd_update){ _drawVelArrow(); }
-
-    // Pointcloud Drawing
-    if(_pointcloud_data_update){
-        int num_skip = 5;
-        for(size_t i(0); i<_num_points/num_skip; ++i){
-            SphereVisualization sphere;
-            sphere.position = _points[i*num_skip];
-            sphere.color = {1.0, 0.2, 0.2, 1.0};
-            sphere.radius = 0.007;
-            _drawSphere(sphere);
-        }
-    }
-
-
-    glDisable(GL_BLEND);
-    for (size_t i(0); i< _drawList._visualizationData->num_meshes; ++i){
-        _drawMesh(_drawList._visualizationData->meshes[i]);
-    }
-    // Heightmap Drawing
-    if(_obstacle_update){ _drawObstacleField(); }//实时更新探测区域100*100内的obstacle
-    if(_heightmap_data_update){
-//        _drawboxheightmap();
-//        _drawHeightMap();
-//        _BoxObstacleDrawing();
-    }//实时更新网格高度地图
-    for (size_t i = 0; i < _drawList._visualizationData->num_paths; i++) {
-        PathVisualization path = _drawList._visualizationData->paths[i];
-        glColor4f(path.color[0], path.color[1], path.color[2], path.color[3]);
-        glBegin(GL_LINE_STRIP);
-        for (size_t j = 0; j < path.num_points; j++) {
-            glVertex3d(path.position[j][0], path.position[j][1], path.position[j][2]);
-        }
-        glEnd();
-    }
-
-    glPopAttrib();
-    glEnable(GL_LIGHTING);
+  glPopAttrib();
+  glEnable(GL_LIGHTING);
 }
 
 void Graphics3D::setHideFloor(bool x) {
-    show_floor = !x;
+  show_floor = !x;
 }
 
 void Graphics3D::setHideRobot(bool x) {
-    show_robot = !x;
+  show_robot = !x;
 }
 
 void Graphics3D::_DrawContactForce() {
-    glLineWidth(2.0);
-    // double scale(0.02);
-    double scale(0.0025);
+  glLineWidth(2.0);
+  // double scale(0.02);
+  double scale(0.0025);
 
-    glPushAttrib(GL_COLOR_BUFFER_BIT);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glPushAttrib(GL_COLOR_BUFFER_BIT);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    for (size_t i(0); i < _drawList.getTotalNumGC(); ++i) {
-        glColor4f(0.8f, 0.0f, 0.f, 0.5f);
-        Vec3<float> floatForce, floatPos;
-        for (size_t j = 0; j < 3; j++) {
-            floatPos(j) = _drawList.getGCPos(i)[j];
-            floatForce(j) = scale * _drawList.getGCForce(i)[j];
-        }
-        _drawArrow(floatPos, floatForce, .005, .015, .04);
+  for (size_t i(0); i < _drawList.getTotalNumGC(); ++i) {
+    glColor4f(0.8f, 0.0f, 0.f, 0.5f);
+    Vec3<float> floatForce, floatPos;
+    for (size_t j = 0; j < 3; j++) {
+      floatPos(j) = _drawList.getGCPos(i)[j];
+      floatForce(j) = scale * _drawList.getGCForce(i)[j];
     }
-    glPopAttrib();
-    glDisable(GL_BLEND);
+    _drawArrow(floatPos, floatForce, .005, .015, .04);
+  }
+  glPopAttrib();
+  glDisable(GL_BLEND);
 }
 
 void Graphics3D::_DrawContactPoint() {
+  glPointSize(5);
 
-    glPushAttrib(GL_COLOR_BUFFER_BIT);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glPushAttrib(GL_COLOR_BUFFER_BIT);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    for (size_t i(0); i < _drawList.getTotalNumGC(); ++i) {
-        glBegin(GL_POINTS);
-        glPointSize(5);
-        glColor4f(0.8f, 0.0f, 0.1f, 0.3f);
-
-        glVertex3f(_drawList.getGCPos(i)[0], _drawList.getGCPos(i)[1],
-                   _drawList.getGCPos(i)[2]);
-
-        glEnd();
-    }
+  for (size_t i(0); i < _drawList.getTotalNumGC(); ++i) {
     glBegin(GL_POINTS);
-    glPointSize(20);
     glColor4f(0.8f, 0.0f, 0.1f, 0.3f);
-    glVertex3f(0.0,0.0,0.0);
+
+    glVertex3f(_drawList.getGCPos(i)[0], _drawList.getGCPos(i)[1],
+               _drawList.getGCPos(i)[2]);
+
     glEnd();
-    glPopAttrib();
-    glDisable(GL_BLEND);
-}
-void Graphics3D::_DrawNEXTContactPoint() {
-    glPointSize(8);
-
-    glPushAttrib(GL_COLOR_BUFFER_BIT);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//    std::cout<<last_x.size();
-//    if (last_x.empty()){
-//    last_x.(_x_pos[4]);
-//    last_y.push_back(_y_pos);
-//    last_z.push_back(_z_pos);
-//    else if ((_x_pos[0]!=last_x.back()[0])){
-//        last_x.push_back(_x_pos);
-//        last_y.push_back(_y_pos);
-//        last_z.push_back(_z_pos);
-//    }
-//    if (!last_x.empty()){
-//        std::cout<<last_x.size();
-//for (size_t i(0);i<last_z.size()-1;i++){
-    for (size_t j(0); j < 4; ++j) {
-
-        glBegin(GL_POINTS);
-        glColor4f(0.0f, 1.0f, 0.3f, 1.0f);
-        glVertex3f(_x_pos[j], _y_pos[j],_z_pos[j]+0.01);
-        glColor4f(1.0f, 0.0f, 0.3f, 1.0f);
-//        glVertex3f(_x_pos[j]-0.05, _y_pos[j],_z_pos[j]+0.001);
-        glVertex3f(_x_pos[j]-0.10, _y_pos[j],_z_pos[j]+0.01);
-        glEnd();
-    }
-//}}
-    glPopAttrib();
-    glDisable(GL_BLEND);
+  }
+  glPopAttrib();
+  glDisable(GL_BLEND);
 }
 
 void Graphics3D::_rotateZtoDirection(const Vec3<float> &direction) {
-    float len = direction.norm();
-    float dxn = direction(0) / len;
-    float dyn = direction(1) / len;
-    float dzn = direction(2) / len;
+  float len = direction.norm();
+  float dxn = direction(0) / len;
+  float dyn = direction(1) / len;
+  float dzn = direction(2) / len;
 
-    // Note: We need to create a rotation such that the z-axis points in the
-    // direction of the 'direction' argument
-    //       Thus, we can realize the rotation with a pure x-y axial rotation
-    //       The rotation matrix of the rotated frame 'r' to the current frame 'c'
-    //       (c_R_r) has special form. It's 3-rd column in particular has form: [
-    //       wy*sin(theta) -wx*sin(theta) (1- cos(theta))]' where theta , [wx wy
-    //       0] is the angle, axis of rotation
+  // Note: We need to create a rotation such that the z-axis points in the
+  // direction of the 'direction' argument
+  //       Thus, we can realize the rotation with a pure x-y axial rotation
+  //       The rotation matrix of the rotated frame 'r' to the current frame 'c'
+  //       (c_R_r) has special form. It's 3-rd column in particular has form: [
+  //       wy*sin(theta) -wx*sin(theta) (1- cos(theta))]' where theta , [wx wy
+  //       0] is the angle, axis of rotation
 
-    // Find the rotation angle by comparing the z-axis of the current and rotated
-    // frame
-    const double cosTheta = dzn;
-    const double theta = acos(cosTheta);
-    const double sinTheta = sin(theta);
+  // Find the rotation angle by comparing the z-axis of the current and rotated
+  // frame
+  const double cosTheta = dzn;
+  const double theta = acos(cosTheta);
+  const double sinTheta = sin(theta);
 
-    // Exploit the special form of the rotation matrix (explained above) for find
-    // the axis of rotation
-    float rX, rY, rZ;
-    if (theta > 0) {
-        rX = -dyn / sinTheta;
-        rY = dxn / sinTheta;
-        rZ = 0;
-    } else {
-        rX = 0;
-        rY = 0;
-        rZ = 1;
-    }
-    glRotatef(ori::rad2deg(theta), rX, rY, rZ);
+  // Exploit the special form of the rotation matrix (explained above) for find
+  // the axis of rotation
+  float rX, rY, rZ;
+  if (theta > 0) {
+    rX = -dyn / sinTheta;
+    rY = dxn / sinTheta;
+    rZ = 0;
+  } else {
+    rX = 0;
+    rY = 0;
+    rZ = 1;
+  }
+  glRotatef(ori::rad2deg(theta), rX, rY, rZ);
 }
 
 void Graphics3D::_drawSphere(SphereVisualization &sphere) {
-    static GLUquadric *quad = gluNewQuadric();
-    glPushMatrix();
-    _translate(sphere.position);
-    _setColor(sphere.color);
-    gluSphere(quad, sphere.radius, 16, 16);
-    glPopMatrix();
+  static GLUquadric *quad = gluNewQuadric();
+  glPushMatrix();
+  _translate(sphere.position);
+  _setColor(sphere.color);
+  gluSphere(quad, sphere.radius, 16, 16);
+  glPopMatrix();
 }
 
 void Graphics3D::_drawCone(ConeVisualization &cone) {
-    static GLUquadric *quad = gluNewQuadric();
-    float len = cone.direction.norm();
+  static GLUquadric *quad = gluNewQuadric();
+  float len = cone.direction.norm();
 
-    glPushMatrix();
-    _setColor(cone.color);
-    _translate(cone.point_position);
-    _rotateZtoDirection(cone.direction);
-    const int detail = 32;
-    gluCylinder(quad, 0, cone.radius, len, detail, 1);
-    glPopMatrix();
+  glPushMatrix();
+  _setColor(cone.color);
+  _translate(cone.point_position);
+  _rotateZtoDirection(cone.direction);
+  const int detail = 32;
+  gluCylinder(quad, 0, cone.radius, len, detail, 1);
+  glPopMatrix();
 }
 
 void Graphics3D::_drawBlock(BlockVisualization &box) {
+  glPushMatrix();
+  _translate(box.corner_position);
+  _setColor(box.color);
+  glRotatef(box.rpy(2), 0, 0, 1);
+  glRotatef(box.rpy(1), 0, 1, 0);
+  glRotatef(box.rpy(0), 1, 0, 0);
 
-//    glutInit(&argc, argv);
-    glPushMatrix();
-    glTranslatef(0.2 + _vel_cmd_pos[0], -1.0 + _vel_cmd_pos[1], 0);_translate(box.corner_position);
-
-//    _setColor(box.color);
-    glRotatef(box.rpy(2), 0, 0, 1);
-    glRotatef(box.rpy(1), 0, 1, 0);
-    glRotatef(box.rpy(0), 1, 0, 0);
-    float color[3]={box.color(0),box.color(1),box.color(2)};
-    glScalef(box.dimension(0), box.dimension(1), box.dimension(2));
-//    glutSolidCube(1.0);
-    _DrawBox(0.021, 0.021, box.height, color);
-
-    glPopMatrix();
-
+  glScalef(box.dimension(0), box.dimension(1), box.dimension(2));
+  glTranslatef(.5, .5, .5);
+  _DrawBox(1, 1, 1);
+  glPopMatrix();
 }
 
 void Graphics3D::_drawArrow(ArrowVisualization &arrow) {
-    _setColor(arrow.color);
-    _drawArrow(arrow.base_position, arrow.direction, arrow.shaft_width,
-               arrow.head_width, arrow.head_length);
+  _setColor(arrow.color);
+  _drawArrow(arrow.base_position, arrow.direction, arrow.shaft_width,
+             arrow.head_width, arrow.head_length);
 }
 
 void Graphics3D::_drawArrow(const Vec3<float> &position,
                             const Vec3<float> &direction, float lineWidth,
                             float headWidth, float headLength) {
-    double len = direction.norm();
+  double len = direction.norm();
 
-    glPushMatrix();
-    _translate(position);
-    _rotateZtoDirection(direction);
+  glPushMatrix();
+  _translate(position);
+  _rotateZtoDirection(direction);
 
-    double cylinderLength = len;
-    if (cylinderLength > headLength) {
-        cylinderLength -= headLength;
-    } else {
-        headLength = cylinderLength;
-        cylinderLength = 0;
-    }
+  double cylinderLength = len;
+  if (cylinderLength > headLength) {
+    cylinderLength -= headLength;
+  } else {
+    headLength = cylinderLength;
+    cylinderLength = 0;
+  }
 
-    const int detail = 32;
-    static GLUquadric *quad = gluNewQuadric();
+  const int detail = 32;
+  static GLUquadric *quad = gluNewQuadric();
 
-    // glPolygonMode(GL_FRONT, GL_FILL);
-    // Draw Cylinder
-    gluCylinder(quad, lineWidth, lineWidth, cylinderLength, detail, 1);
+  // glPolygonMode(GL_FRONT, GL_FILL);
+  // Draw Cylinder
+  gluCylinder(quad, lineWidth, lineWidth, cylinderLength, detail, 1);
 
-    // Draw Cylinder Base
-    glRotated(180, 1, 0, 0);
-    gluDisk(quad, 0, lineWidth, detail, detail);
-    glRotated(180, 1, 0, 0);
+  // Draw Cylinder Base
+  glRotated(180, 1, 0, 0);
+  gluDisk(quad, 0, lineWidth, detail, detail);
+  glRotated(180, 1, 0, 0);
 
-    glTranslatef(0, 0, cylinderLength);
-    // Draw Arrowhead
-    gluCylinder(quad, headWidth, 0.0f, headLength, detail, detail);
+  glTranslatef(0, 0, cylinderLength);
+  // Draw Arrowhead
+  gluCylinder(quad, headWidth, 0.0f, headLength, detail, detail);
 
-    glRotated(180, 1, 0, 0);
-    // Draw Arrowhead Base
-    gluDisk(quad, lineWidth, headWidth, detail, detail);
-    glPopMatrix();
+  glRotated(180, 1, 0, 0);
+  // Draw Arrowhead Base
+  gluDisk(quad, lineWidth, headWidth, detail, detail);
+  glPopMatrix();
 }

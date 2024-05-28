@@ -30,9 +30,35 @@ void RobotState::set(flt* p_, flt* v_, flt* q_, flt* w_, flt* r_,flt yaw_)
     fpt yc = cos(yaw_);
     fpt ys = sin(yaw_);
 
-    R_yaw <<  yc,  -ys,   0,
-             ys,  yc,   0,
-               0,   0,   1;
+
+    if (asc)
+    {
+        const fpt ps = sin(pitch_ascension1);
+        const fpt pc = cos(pitch_ascension1);
+        R_yaw <<  yc*pc,  -ys,   yc*ps,
+                    ys*pc,  yc,   ys*ps,
+                    -ps,   0,   pc;
+        //std::cout << "ascending+++++++++++ " << R_yaw << std::endl;
+    }
+    else if (descending)
+    {
+        const fpt ps = sin(pitch_descension1);
+        const fpt pc = cos(pitch_descension1);
+        R_yaw <<  yc*pc,  -ys,   yc*ps,
+                    ys*pc,  yc,   ys*ps,
+                    -ps,   0,   pc;
+
+        //std::cout << "descending++++++++++++ " << R_yaw << std::endl;
+    }
+    
+    else
+    { 
+        R_yaw <<  yc,  -ys,   0,
+                  ys,  yc,   0,
+                   0,   0,   1;
+        //std::cout << "ground+++++++++++++ " << R_yaw << std::endl;
+    }
+    //std::cout << "se++++++++++++++++++++++++++++ " << R_yaw << std::endl;
 
     Matrix<fpt,3,1> Id;
     Id << .07f, 0.26f, 0.242f;

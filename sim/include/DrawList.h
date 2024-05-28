@@ -68,7 +68,7 @@ class DrawList {
   size_t addDebugSphere(float radius);
   void addBox(double depth, double width, double height,
               const Vec3<double> &pos, const Mat3<double> &ori,
-              bool transparent, const Vec4<float>  &score);
+              bool transparent);
   void addMesh(double grid_size, const Vec3<double> &left_corner,
                const DMat<double> &height_map, bool transparent);
 

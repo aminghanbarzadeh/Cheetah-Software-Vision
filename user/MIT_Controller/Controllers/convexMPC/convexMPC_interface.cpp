@@ -115,7 +115,7 @@ void update_solver_settings(int max_iter, double rho, double sigma, double solve
   else if(use_jcqp > 0.5)
     update.use_jcqp = 1;
   else
-    update.use_jcqp = 0;
+    update.use_jcqp = 0; //IUST diff from vision
 }
 
 void update_problem_data_floats(float* p, float* v, float* q, float* w,

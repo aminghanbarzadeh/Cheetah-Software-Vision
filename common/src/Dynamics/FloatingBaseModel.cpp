@@ -946,6 +946,7 @@ void FloatingBaseModel<T>::runABA(const DVec<T> &tau,
   RotMat<T> Rup = rotationFromSXform(_Xup[5]);
   dstate.dBodyPosition =
       Rup.transpose() * _state.bodyVelocity.template block<3, 1>(3, 0);
+  //std::cout << "ifdpppppp############ (" << dstate.dBodyPosition << ")\n";
   dstate.dBodyVelocity = afb;
   // qdd is set in the for loop above
 }

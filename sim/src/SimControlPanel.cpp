@@ -120,18 +120,13 @@ SimControlPanel::SimControlPanel(QWidget* parent)
 
   _pointsLCM.subscribe("cf_pointcloud", &SimControlPanel::handlePointsLCM, this);
   _pointsLCMThread = std::thread(&SimControlPanel::pointsLCMThread, this); 
-// 1013
-//  _heightmapLCM.subscribe("local_heightmap", &SimControlPanel::handleHeightmapLCM, this);
-//  _heightmapLCMThread = std::thread(&SimControlPanel::heightmapLCMThread, this);
-  _heightmapLCM.subscribe("heightmapnew", &SimControlPanel::handleHeightmapnewLCM, this);
+
+  _heightmapLCM.subscribe("local_heightmap", &SimControlPanel::handleHeightmapLCM, this);
   _heightmapLCMThread = std::thread(&SimControlPanel::heightmapLCMThread, this);
 
-//  _indexmapLCM.subscribe("traversability", &SimControlPanel::handleIndexmapLCM, this);
-//  _indexmapLCMThread = std::thread(&SimControlPanel::indexmapLCMThread, this);
-  _indexmapLCM.subscribe("traversability_float", &SimControlPanel::handleIndexmapfloatLCM, this);
+  _indexmapLCM.subscribe("traversability", &SimControlPanel::handleIndexmapLCM, this);
   _indexmapLCMThread = std::thread(&SimControlPanel::indexmapLCMThread, this);
-//1125
-  _ctrlVisionLCM.subscribe("footsteps", &SimControlPanel::handleFootstepsLCM, this);
+
   _ctrlVisionLCM.subscribe("velocity_cmd", &SimControlPanel::handleVelocityCMDLCM, this);
   _ctrlVisionLCM.subscribe("obstacle_visual", &SimControlPanel::handleObstacleLCM, this);
   _ctrlVisionLCMThread = std::thread(&SimControlPanel::ctrlVisionLCMThread, this);
@@ -155,26 +150,11 @@ void SimControlPanel::handleVelocityCMDLCM(const lcm::ReceiveBuffer* rbuf,
     for(size_t i(0); i<3; ++i){
       _graphicsWindow->_vel_cmd_dir[i] = msg->vel_cmd[i];
       _graphicsWindow->_vel_cmd_pos[i] = msg->base_position[i];
-      _simulation->_glo_robot_pos[i]=msg->base_position[i];
     }
     _graphicsWindow->_vel_cmd_update = true;
   }
 }
-void SimControlPanel::handleFootstepsLCM(const lcm::ReceiveBuffer* rbuf,
-                                           const std::string & chan,
-                                           const footsteps* msg){
-    (void)rbuf;
-    (void)chan;
 
-    if(_graphicsWindow){
-        for(size_t i(0); i<4; ++i){
-            _graphicsWindow->_x_pos[i] = msg->xpos[i];
-            _graphicsWindow->_y_pos[i] = msg->ypos[i];
-            _graphicsWindow->_z_pos[i] = msg->zpos[i];
-        }
-//        _graphicsWindow->_footstep_update = true;
-    }
-}
 void SimControlPanel::handleObstacleLCM(const lcm::ReceiveBuffer* rbuf, 
     const std::string & chan,
     const obstacle_visual_t* msg){
@@ -230,38 +210,7 @@ void SimControlPanel::handleIndexmapLCM(const lcm::ReceiveBuffer *rbuf,
     _graphicsWindow->_indexmap_data_update = true;
   }
 }
-void SimControlPanel::handleIndexmapfloatLCM(const lcm::ReceiveBuffer *rbuf,
-                                        const std::string &chan,
-                                        const traversability_float_t *msg) {
-    (void)rbuf;
-    (void)chan;
 
-    if(_graphicsWindow){
-        for(size_t i(0); i<_graphicsWindow->x_size; ++i){//100
-            for(size_t j(0); j<_graphicsWindow->y_size; ++j){
-                _graphicsWindow->idx_map(i,j) = msg->map[i][j];
-                _simulation->s_map(i,j)=msg->map[i][j];
-            }
-        }
-        _graphicsWindow->_indexmap_data_update = true;
-    }
-}
-void SimControlPanel::handleHeightmapnewLCM(const lcm::ReceiveBuffer *rbuf,
-                                         const std::string &chan,
-                                         const heightnew_t *msg) {
-    (void)rbuf;
-    (void)chan;
-
-    if(_graphicsWindow){
-        for(size_t i(0); i<_graphicsWindow->x_size; ++i){//100
-            for(size_t j(0); j<_graphicsWindow->y_size; ++j){
-                _graphicsWindow->_map(i,j) = msg->map[i][j];
-                _simulation->h_map(i,j) = msg->map[i][j];
-            }
-        }
-        _graphicsWindow->_heightmap_data_update = true;
-    }
-}
 
 void SimControlPanel::handleHeightmapLCM(const lcm::ReceiveBuffer *rbuf,
                                       const std::string &chan,
@@ -315,6 +264,7 @@ void SimControlPanel::handleSpiDebug(const lcm::ReceiveBuffer *rbuf, const std::
         idx++;
       }
     }
+
     _miniCheetahDebugLCM.publish("spi_debug_cmd", &lcm_cmd);
   }
 
@@ -395,7 +345,7 @@ void SimControlPanel::errorCallback(std::string errorMessage) {
 void SimControlPanel::on_startButton_clicked() {
   // get robot type
   RobotType robotType;
-//  robotType =RobotType::MINI_CHEETAH;
+
   if (ui->cheetah3Button->isChecked()) {
     robotType = RobotType::CHEETAH_3;
   } else if (ui->miniCheetahButton->isChecked()) {
@@ -413,7 +363,7 @@ void SimControlPanel::on_startButton_clicked() {
   }
 
   _simulationMode = ui->simulatorButton->isChecked();
-//    _simulationMode = true;
+
   // graphics
   printf("[SimControlPanel] Initialize Graphics...\n");
   _graphicsWindow = new Graphics3D();
@@ -441,6 +391,9 @@ void SimControlPanel::on_startButton_clicked() {
       throw e;
     }
 
+
+
+
     // start sim
     _simThread = std::thread(
 
@@ -458,7 +411,6 @@ void SimControlPanel::on_startButton_clicked() {
         try {
           // pass error callback to simulator
           _simulation->runAtSpeed(error_function);
-
         } catch (std::exception &e) {
           // also catch exceptions
           error_function("Exception thrown in simulation thread: " + std::string(e.what()));
