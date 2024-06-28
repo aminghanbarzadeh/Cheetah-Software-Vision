@@ -24,7 +24,7 @@ class RobotState
         Quaternionf q;
         fpt yaw;
         fpt m = 9;
-        float pitch_ascension1 = -0.459;
+        float pitch_ascension1 = -0.32;
         float pitch_descension1 = 0.459;
         //fpt m = 50.236; //DH
     //private:

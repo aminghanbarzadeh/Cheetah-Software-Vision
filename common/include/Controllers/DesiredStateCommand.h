@@ -105,6 +105,7 @@ public:
   bool descending_trigger = false;
   bool ground_trigger = false;
   bool cancel_trigger = false;
+  bool stair_trigger = false;
 
 private:
   StateEstimate<T>* stateEstimate;

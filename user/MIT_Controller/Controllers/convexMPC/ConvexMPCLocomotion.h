@@ -15,6 +15,7 @@ using Eigen::Array4i;
 extern float gholam;
 extern bool asc;
 extern bool descending;
+extern bool stair_climb;
 template<typename T>
 struct CMPC_Result {
   LegControllerCommand<T> commands[4];
@@ -171,7 +172,7 @@ private:
   double zpos_sum = 0;
   //bool ascending = false;
   float Pframp = 0;
-  float pitch_ascension = -0.459;
+  float pitch_ascension = -0.32;
   float pitch_descension = -pitch_ascension;
 };
 

@@ -63,6 +63,7 @@ void DesiredStateCommand<T>::convertToStateCommands() {
     descending_trigger = gamepadCommand->y;
     //ground_trigger = gamepadCommand->b;
     cancel_trigger = gamepadCommand->rightBumper;
+    stair_trigger = gamepadCommand->b;
     
   }
   // Warning!!!!

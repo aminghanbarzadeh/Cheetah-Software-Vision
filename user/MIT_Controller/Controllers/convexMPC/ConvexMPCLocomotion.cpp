@@ -13,6 +13,9 @@
 //RobotState robotst;
 bool asc = false;
 bool descending = false;
+bool stair_climb = false;
+const double stair_edges[] = {0.3, 0.55, 0.8, 1.05, 1.3};
+const double stair_edge_tolerance = 0.03;
 ////////////////////
 // Controller
 ////////////////////
@@ -103,6 +106,7 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
       //z_vel_cmd = x_vel_cmd * 0.364;
       asc = true;
       _pitch_des = pitch_ascension;
+      x_vel_cmd = 0.1;
 
     }
     else if (data._desiredStateCommand->descending_trigger || descending)
@@ -110,6 +114,11 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
       //z_vel_cmd = x_vel_cmd * -0.364;
       descending = true;
       _pitch_des = pitch_descension;
+    }
+    else if(data._desiredStateCommand->stair_trigger || stair_climb)
+    {
+      stair_climb = true;
+      x_vel_cmd = 0.1;
     }
     
     else
@@ -121,6 +130,7 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
     if(data._desiredStateCommand->cancel_trigger){
       asc = false;
       descending = false;
+      stair_climb = false;
     }
  
     //std::cout << "se++++++++++++++++++++++++++++ " << data._desiredStateCommand->cancel_trigger << std::endl;
@@ -240,7 +250,7 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
   rpy_int[1] = fminf(fmaxf(rpy_int[1], -.25), .25); //IUST changed
   rpy_comp[1] = v_robot[0] * rpy_int[1];//- 0.4; //IUST changed working!!!! 
   rpy_comp[0] = v_robot[1] * rpy_int[0] * (gaitNumber!=8);  //turn off for pronking
-  //std::cout << "rbody+!@+#$%+^+%+#&*%(%*&^%$): " << rpy_comp[1] << std::endl;
+  //std::cout << "rbody+!@+#$%+^+%+#&*%(%*&^%$): " << seResult.position[2] << std::endl;
 
   for(int i = 0; i < 4; i++) {
     pFoot[i] = seResult.position + 
@@ -273,7 +283,9 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     }
     firstRun = false;
   }
-
+  if(seResult.position[2] < 0.25) {
+    world_position_desired[2] = 0.25;
+  }  
   // foot placement
 
   for(int l = 0; l < 4; l++)
@@ -297,7 +309,7 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     }
     //if(firstSwing[i]) {
     //footSwingTrajectories[i].setHeight(.05);
-    footSwingTrajectories[i].setHeight(.09);
+    footSwingTrajectories[i].setHeight(.11);
     Vec3<float> offset(0, side_sign[i] * .065, 0); //IUST
     Vec3<float> pRobotFrame = (data._quadruped->getHipLocation(i) + offset);
     pRobotFrame[1] += interleave_y[i] * v_abs * interleave_gain;
@@ -319,6 +331,11 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     //std::cout << "************************: " << seResult.position[2] << std::endl;
     Vec3<float> Pf = seResult.position + seResult.rBody.transpose() * (pYawCorrected
           + des_vel * swingTimeRemaining[i]);
+    
+    if (descending)
+    {
+      Pf[0] -= 0.094;
+    }
     
    
 
@@ -344,27 +361,58 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     Pf[0] +=  pfx_rel;
     Pf[1] +=  pfy_rel;
     //Pf[2] += pfz_rel;
-    if (contactStates[i] != 0)
-    {
-      Pf[2] += data._legController->datas[i].p[2];
-      //std::cout << "stance********************: " << contactStates[i]<< std::endl;
-    }
-    else if (swingStates[i] < 0.5)
-    {
-      Pf[2] += (data._legController->datas[i].p[2] - (0.09 * swingStates[i] * 2));
-      //std::cout << "liftoff*******************: " << contactStates[i]<< std::endl;
-    }
-    else
-    {
-      Pf[2] += (data._legController->datas[i].p[2] - (0.09-(0.09 * (swingStates[i]-0.5) * 2)));
-      //std::cout << "comedown*****************: " << contactStates[i]<< std::endl;
-    }
+    // if (contactStates[i] != 0)
+    // {
+    //   Pf[2] += data._legController->datas[i].p[2];
+    //   //std::cout << "stance********************: " << contactStates[i]<< std::endl;
+    // }
+    // else if (swingStates[i] < 0.5)
+    // {
+    //   Pf[2] += (data._legController->datas[i].p[2] - (0.09 * swingStates[i] * 2));
+    //   //std::cout << "liftoff*******************: " << contactStates[i]<< std::endl;
+    // }
+    // else
+    // {
+    //   Pf[2] += (data._legController->datas[i].p[2] - (0.09-(0.09 * (swingStates[i]-0.5) * 2)));
+    //   //std::cout << "comedown*****************: " << contactStates[i]<< std::endl;
+    // }
+    Pf[2] += (data._legController->datas[i].p[2] - 0.003); //-0.0005 + pFoot[i][2];//+ (seResult.position[2] - 0.28);
+    // if (i == 0)
+    // {
+    //   std::cout << "contactstates:  "<< -0.0005 + pFoot[i][2] << "  ground:  " << Pf[2] << std::endl;
+    // }
+
     //Pf[2] += (data._legController->datas[i].p[2] - 0.005); //-0.0005 + pFoot[i][2];//+ (seResult.position[2] - 0.28);
-    if (i == 0)
+    // if (i == 0)
+    // {
+    //   std::cout << "contactstates:  "<< -0.0005 + pFoot[i][2] << "  ground:  " << Pf[2] << std::endl;
+    // }
+
+    if(asc)
     {
-      std::cout << "contactstates:  "<< -0.0005 + pFoot[i][2] << "  ground:  " << Pf[2] << std::endl;
+      for (int inumber = 0; inumber < 5; inumber++)
+      {
+        if (std::fabs(Pf[0] - stair_edges[inumber]) < stair_edge_tolerance)
+        {
+          Pf[0] += 0.06;
+        }
+      }
     }
-    
+    // if(asc)
+    // {
+    //   for (int inumber = 0; inumber < 5; inumber++)
+    //   {
+    //     if ((Pf[0] - stair_edges[inumber]) < stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) > 0)
+    //     {
+    //       Pf[0] += 0.03;
+    //     }
+    //     else if ((Pf[0] - stair_edges[inumber]) > -stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) < 0)
+    //     {
+    //       Pf[0] -= 0.03;
+    //     }
+    //   }
+    // }
+
     //std::cout << "contactstates:  "<< contactStates[2] << "  ground:  " << Pf[2] << std::endl;
     //std::cout << "************************: " << Pf[2]-( -0.0005 + pFoot[i][2])<< std::endl;
     footSwingTrajectories[i].setFinalPosition(Pf);
