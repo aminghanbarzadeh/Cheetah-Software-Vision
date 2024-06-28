@@ -103,6 +103,16 @@ private:
     int gaitNumber;
     static const int sumStep = 18;//0528
 
+    float _yaw_turn_rate;
+    float _yaw_des;
+
+    float _roll_des;
+    float _pitch_des = 0;
+
+    float _x_vel_des = 0.;
+    float _y_vel_des = 0.;
+    float _z_vel_des = 0.;
+
     Vec3<float> world_position_desired;
     Vec3<float> rpy_int;
     Vec3<float> rpy_comp;
