@@ -8,23 +8,101 @@
 #include <robot/include/RobotController.h>
 #include "Gait.h"
 
+#include <chrono>
+#include <thread>
+#include <fstream>
+#include <cmath>
+#include <vector>
 //#define DRAW_DEBUG_SWINGS
 //#define DRAW_DEBUG_PATH
 //RobotState robotst;
+
 bool asc = false;
 bool descending = false;
 bool stair_climb = false;
-const double stair_edges[] = {0.3, 0.55, 0.8, 1.05, 1.3};
-const double stair_edge_tolerance = 0.03;
+//const double stair_edges[] = {0.3, 0.55, 0.8, 1.05, 1.3};
+const double stair_edge_tolerance = 0.04;
+const double adjustment = 0.003;
+
+const int steps = 5;
+const double delta = .067;
+const double runstairs = .25;
+const int cycletime = 4;
+const double stair_start = 0.3;
+const double bezierHeight = delta + .05;
 ////////////////////
 // Controller
 ////////////////////
 
+void initialize_log(const std::string& filename) {
+    std::ofstream log_file(filename, std::ios::out); // Open in write mode
+    if (log_file.is_open()) {
+        log_file << "horizonLength,cycletime,bezierHeight,delta,runstairs,pitch_ascension,offset,Pf,des_vel\n";
+        log_file.close();
+    } else {
+        std::cerr << "Unable to initialize log file: " << filename << "\n";
+    }
+}
+
+
+void log_parameters(const std::string& filename, int horizonLength_, int cycletime_, double bezierHeight_, double delta_, int runstairs_, float pitch_ascension_, float offsetY, const std::vector<Vec3<float>>& allPf, const Vec3<float>& des_vel) {
+    std::ofstream log_file(filename, std::ios::app); // Open in append mode
+    if (log_file.is_open()) {
+        log_file << horizonLength_ << ","
+                 << cycletime_ << ","
+                 << bezierHeight_ << ","
+                 << delta_ << ","
+                 << runstairs_ << ","
+                 << pitch_ascension_ << ","
+                 << offsetY << ",";
+
+        // Log all foot positions
+        for (const auto& Pf : allPf) {
+            log_file << Pf.transpose() << ",";
+        }
+
+        // Log desired velocity
+        log_file << des_vel.transpose() << "\n";
+
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+
+
+
+std::string log_filename = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/1_.067_5_-.3078.txt"; // Update the path as needed
+
+std::vector<double> generate_stair_edges(int count, double start, double step) {
+  std::vector<double> stair_edges;
+  for (int i = 0; i < count; ++i) {
+    stair_edges.push_back(start + i * step);
+  }
+  return stair_edges;
+}
+
+void determine_z_position(float x, float& z) {
+  if (x < stair_start) {
+    z = -adjustment;
+  } else {
+    for (int step = 0; step < steps; ++step) {
+      double step_start = stair_start + step * runstairs;
+      double step_end = step_start + runstairs;
+      if (x >= step_start && x < step_end) {
+        z = (1+step) * delta - adjustment;
+        break;
+      }
+    }
+  }
+}
+
 ConvexMPCLocomotion::ConvexMPCLocomotion(float _dt, int _iterations_between_mpc, MIT_UserParameters* parameters) :
   iterationsBetweenMPC(_iterations_between_mpc),
-  horizonLength(10),
+  horizonLength(2*cycletime),
   dt(_dt),
-  trotting(horizonLength, Vec4<int>(0,5,5,0), Vec4<int>(5,5,5,5),"Trotting"),
+  trotting(horizonLength, Vec4<int>(0,cycletime,cycletime,0), Vec4<int>(cycletime,cycletime,cycletime,cycletime),"Trotting"),
   bounding(horizonLength, Vec4<int>(5,5,0,0),Vec4<int>(4,4,4,4),"Bounding"),
   //bounding(horizonLength, Vec4<int>(5,5,0,0),Vec4<int>(3,3,3,3),"Bounding"),
   pronking(horizonLength, Vec4<int>(0,0,0,0),Vec4<int>(4,4,4,4),"Pronking"),
@@ -40,7 +118,8 @@ ConvexMPCLocomotion::ConvexMPCLocomotion(float _dt, int _iterations_between_mpc,
   pacing(horizonLength, Vec4<int>(5,0,5,0),Vec4<int>(5,5,5,5),"Pacing"),
   random(horizonLength, Vec4<int>(9,13,13,9), 0.4, "Flying nine thirteenths trot"),
 //  random(horizonLength, Vec4<int>(0,3,6,9), 0.5, "Flying  trot"),
-  random2(horizonLength, Vec4<int>(8,16,16,8), 0.5, "Double Trot")//IUST imp diff from vision!
+  random2(horizonLength, Vec4<int>(8,16,16,8), 0.5, "Double Trot"),
+  stair_edges(generate_stair_edges(steps, stair_start, runstairs)) // Generate stair edges
 {
   _parameters = parameters;
   dtMPC = dt * iterationsBetweenMPC;
@@ -63,6 +142,8 @@ ConvexMPCLocomotion::ConvexMPCLocomotion(float _dt, int _iterations_between_mpc,
    pBody_des.setZero();
    vBody_des.setZero();
    aBody_des.setZero();
+
+   initialize_log(log_filename);
 }
 
 void ConvexMPCLocomotion::initialize(){
@@ -74,6 +155,17 @@ void ConvexMPCLocomotion::recompute_timing(int iterations_per_mpc) {
   iterationsBetweenMPC = iterations_per_mpc;
   dtMPC = dt * iterations_per_mpc;
 }
+
+auto current_time() {
+  return std::chrono::high_resolution_clock::now();
+  
+}
+auto time_diff(const std::chrono::time_point<std::chrono::high_resolution_clock>& start) {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(current_time() - start).count();
+  //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(current_time() - start).count() << std::endl;
+  //std::cout << std::chrono::high_resolution_clock::now() << std::endl;
+}
+auto start_time = current_time();
 
 void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
 //   if(data._quadruped->_robotType == RobotType::MINI_CHEETAH){
@@ -101,12 +193,25 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
     x_vel_cmd = data._desiredStateCommand->leftAnalogStick[1]*0.2;
     y_vel_cmd = data._desiredStateCommand->leftAnalogStick[0]*0.2;
     //z_vel_cmd = data._desiredStateCommand->rightAnalogStick[0]*0.2;
+    // std::thread timer_thread([&]() {
+    //     std::this_thread::sleep_for(std::chrono::seconds(5));
+    //     data._desiredStateCommand->ascending_trigger = true;
+    //     std::cout << "Parameter set to true after 5 seconds." << std::endl;
+    // });
+    
+    //std::cout <<  << std::endl;
+    if (time_diff(start_time) >= 15000) {
+      data._desiredStateCommand->ascending_trigger = true;
+      std::cout << "Parameter set to true after 5 seconds." << std::endl;
+    //         // Reset the start time to avoid repeatedly setting the parameter
+      start_time = current_time();
+    }
     if(data._desiredStateCommand->ascending_trigger || asc){
       
       //z_vel_cmd = x_vel_cmd * 0.364;
       asc = true;
       _pitch_des = pitch_ascension;
-      x_vel_cmd = 0.1;
+      x_vel_cmd = 0.3;
 
     }
     else if (data._desiredStateCommand->descending_trigger || descending)
@@ -118,12 +223,12 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
     else if(data._desiredStateCommand->stair_trigger || stair_climb)
     {
       stair_climb = true;
-      x_vel_cmd = 0.1;
+      //x_vel_cmd = 0.1;
     }
     
     else
     {
-      _pitch_des = 0;
+      _pitch_des = -0.0;
       
     }
     
@@ -156,6 +261,15 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
   }
 
   auto& seResult = data._stateEstimator->getResult();
+
+  if (seResult.position[0] > (runstairs*steps) + stair_start + 0.1) //stops the controller(NN Purposes)
+  {
+    std::ofstream signal_file("/tmp/robot_position_reached");
+    signal_file << "done";
+    signal_file.close();
+    //break; // Exit the loop to stop the controller
+  }
+  
 
   // Check if transition to standing
   if(((gaitNumber == 4) && current_gait != 4) || firstRun)
@@ -283,9 +397,9 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     }
     firstRun = false;
   }
-  if(seResult.position[2] < 0.25) {
-    world_position_desired[2] = 0.25;
-  }  
+  // if(seResult.position[2] < 0.25) {
+  //   world_position_desired[2] = 0.25;
+  // }  
   // foot placement
 
   for(int l = 0; l < 4; l++)
@@ -300,6 +414,12 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
   //std::cout << "************************: " << seResult.rpy[1] << std::endl;
   Vec4<float> contactStates= gait->getContactState();
   Vec4<float> swingStates = gait->getSwingState();
+  //locomo += 0.01;
+
+  std::vector<Vec3<float>> allPf(4); // Vector to store all foot positions
+  float offsetY = 0; // Variable to store the second component of the offset
+  Vec3<float> des_vel0; // Variable to store desired velocity
+
   for(int i = 0; i < 4; i++)
   {
     if(firstSwing[i]) {
@@ -309,8 +429,8 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     }
     //if(firstSwing[i]) {
     //footSwingTrajectories[i].setHeight(.05);
-    footSwingTrajectories[i].setHeight(.11);
-    Vec3<float> offset(0, side_sign[i] * .065, 0); //IUST
+    footSwingTrajectories[i].setHeight(bezierHeight);
+    Vec3<float> offset(0, side_sign[i] * .065, 0);
     Vec3<float> pRobotFrame = (data._quadruped->getHipLocation(i) + offset);
     pRobotFrame[1] += interleave_y[i] * v_abs * interleave_gain;
     
@@ -334,7 +454,7 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     
     if (descending)
     {
-      Pf[0] -= 0.094;
+      Pf[0] -= 0.1;
     }
     
    
@@ -368,12 +488,12 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     // }
     // else if (swingStates[i] < 0.5)
     // {
-    //   Pf[2] += (data._legController->datas[i].p[2] - (0.09 * swingStates[i] * 2));
+    //   Pf[2] += (data._legController->datas[i].p[2] - (bezierHeight * swingStates[i] * 2));
     //   //std::cout << "liftoff*******************: " << contactStates[i]<< std::endl;
     // }
     // else
     // {
-    //   Pf[2] += (data._legController->datas[i].p[2] - (0.09-(0.09 * (swingStates[i]-0.5) * 2)));
+    //   Pf[2] += (data._legController->datas[i].p[2] - (bezierHeight-(bezierHeight * (swingStates[i]-0.5) * 2)));
     //   //std::cout << "comedown*****************: " << contactStates[i]<< std::endl;
     // }
     Pf[2] += (data._legController->datas[i].p[2] - 0.003); //-0.0005 + pFoot[i][2];//+ (seResult.position[2] - 0.28);
@@ -388,37 +508,164 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     //   std::cout << "contactstates:  "<< -0.0005 + pFoot[i][2] << "  ground:  " << Pf[2] << std::endl;
     // }
 
-    if(asc)
-    {
-      for (int inumber = 0; inumber < 5; inumber++)
-      {
-        if (std::fabs(Pf[0] - stair_edges[inumber]) < stair_edge_tolerance)
-        {
-          Pf[0] += 0.06;
-        }
-      }
-    }
     // if(asc)
     // {
+
     //   for (int inumber = 0; inumber < 5; inumber++)
     //   {
     //     if ((Pf[0] - stair_edges[inumber]) < stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) > 0)
     //     {
-    //       Pf[0] += 0.03;
+    //       Pf[0] += stair_edge_tolerance;
     //     }
     //     else if ((Pf[0] - stair_edges[inumber]) > -stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) < 0)
     //     {
-    //       Pf[0] -= 0.03;
+    //       Pf[0] -= stair_edge_tolerance;
     //     }
     //   }
     // }
 
-    //std::cout << "contactstates:  "<< contactStates[2] << "  ground:  " << Pf[2] << std::endl;
-    //std::cout << "************************: " << Pf[2]-( -0.0005 + pFoot[i][2])<< std::endl;
-    footSwingTrajectories[i].setFinalPosition(Pf);
-//      footSwingTrajectories[i].setHeight(.01);
-  }
+    // if (Pf[0] < 0.3)
+    // {
+    //   Pf[2] = -adjustment;
+      
+    // }else  if (0.3 < Pf[0] && Pf[0]< 0.55)
+    // {
+    //   Pf[2] = delta- adjustment;
+      // if (Pf[0] < 0.425)
+      // {
+      //   Pf[0] = 0.3625;
+      // }else
+      // {
+      //   Pf[0] = 0.4875;
+      // }
+      
+      // if (i==0)
+      // {
+      //   pitch_ascension = -0.6;
+      // }
+      
+    // }else if (0.55 < Pf[0] && Pf[0] < 0.8)
+    // {
+    //   Pf[2] = 2*delta - adjustment;
+      // if (Pf[0] < 0.675)
+      // {
+      //   Pf[0] = 0.6125;
+      // }else
+      // {
+      //   Pf[0] = 0.7375;
+      // }
+      
+    //if (i==0)
+    //{
+    //   pitch_ascension = -0.6;
+    //   // }
+      
+    // }else if (0.8 < Pf[0] && Pf[0]< 1.05)
+    // {
+    //   Pf[2] = 3*delta - adjustment;
+      // if (Pf[0] < 0.925)
+      // {
+      //   Pf[0] = 0.8625;
+      // }else{
+        
+      //   Pf[0] = 0.9875;
+      // }
+    //   // if (i==0)
+    //   // {
+    //   //   pitch_ascension = -0.6;
+    //   // }
+      
+    // }else if (1.05 < Pf[0] && Pf[0]< 1.3)
+    // {
+    //   Pf[2] = 4*delta - adjustment;
+      // if (Pf[0] < 1.175)
+      // {
+      //   Pf[0] = 1.1125;
+      // }else
+      // {
+      //   Pf[0] = 1.2375;
+      // }
+    //   //  if (i==0)
+    //   //  {
+    //   //     pitch_ascension = -0.6;
+    //   //  }
+      
+    // }else if (1.3 < Pf[0] && Pf[0] < 1.55)
+    // {
+    //   Pf[2] = 5*delta- adjustment;
 
+    // Determine the step based on the foot x position
+    determine_z_position(Pf[0], Pf[2]);
+
+    if (Pf[0] > 0.2 + stair_start+(steps*runstairs))
+    {
+      Pf[2] = steps*delta - adjustment;
+      pitch_ascension = 0;
+      _x_vel_des = 0.05;
+
+    }
+
+      // if (Pf[0] < 1.425)
+      // {
+      //   Pf[0] = 1.3625;
+      // }else
+      // {
+      //   Pf[0] = 1.4875;
+      // }
+    //   // if (i==0)
+    //   // {
+    //   //   pitch_ascension = -0.6;
+    //   // }
+    //}else if (Pf[0] > 1.55)
+    //{
+      //Pf[2] = 5*delta - adjustment;
+    //   //pitch_ascension = -0.55;
+
+    // }else if (Pf[0]>2.35 && Pf[0] < 3.703)
+    // {
+    //   Pf[2] = 0.36397*(1.353-Pf[0]+2.35);
+    // }           
+    
+    if (asc)
+    {
+      for (int inumber = 0; inumber < steps; inumber++)
+      {
+        
+        if ((Pf[0] - stair_edges[inumber]) < stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) > 0)
+        {  
+          Pf[0] += stair_edge_tolerance;
+        }
+        else if ((Pf[0] - stair_edges[inumber]) > -stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) < 0)
+        { 
+          Pf[0] -= stair_edge_tolerance;
+        }
+      }
+    }
+
+    
+    //std::cout << "pffff:  "<< Pf[2] << std::endl;
+    //std::cout << "pfffx:  "<< Pf[0] << std::endl;
+    //std::cout << "pfootx:  "<< pFoot[i] << std::endl;
+    //std::cout << "contactstates:  "<< Pf[0] << std::endl;
+    //std::cout << "************************: " << stair_edges[inumber] << std::endl;
+    footSwingTrajectories[i].setFinalPosition(Pf);
+    
+    allPf[i] = Pf; // Store the foot position
+    offsetY = std::abs(offset[1]); // Store the absolute value of the second component of the offset
+    des_vel0 = des_vel; // Store the desired velocity
+
+//      footSwingTrajectories[i].setHeight(.01);
+
+    
+  }
+  float bezierHeight1 = bezierHeight;
+  int horizonLength1 = horizonLength;
+  int cycletime1 = cycletime;
+  double delta1 = delta;
+  int runstairs1 = runstairs;
+  float pitch_ascension0 = pitch_ascension;
+  log_parameters(log_filename, horizonLength1, cycletime1, bezierHeight1, delta1, runstairs1, pitch_ascension0, offsetY, allPf, des_vel0);
+  
   // calc gait
   iterationCounter++;
 
@@ -591,7 +838,7 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
   {
     pBody_RPY_des[1] = pitch_descension;
   }else{
-    pBody_RPY_des[1] = 0;
+    pBody_RPY_des[1] = -0.0;
   }
   
   

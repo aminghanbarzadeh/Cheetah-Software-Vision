@@ -865,5 +865,3 @@ void Simulation::updateGraphics() {
   _window->_drawList.updateAdditionalInfo(*_simulator);
   _window->update();
 }
-
-

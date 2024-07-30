@@ -99,7 +99,7 @@ c2qp(Matrix<fpt,13,13> Ac, Matrix<fpt,13,12> Bc,fpt dt,s16 horizon)
 #ifdef K_PRINT_EVERYTHING
   cout<<"Adt: \n"<<Adt<<"\nBdt:\n"<<Bdt<<endl;
 #endif
-  if(horizon > 19) {
+  if(horizon > 20) {
     throw std::runtime_error("horizon is too long!");
   }
 
