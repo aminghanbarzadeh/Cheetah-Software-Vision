@@ -60,10 +60,10 @@ void DesiredStateCommand<T>::convertToStateCommands() {
     joystickRight = gamepadCommand->rightStickAnalog;
     trigger_pressed = gamepadCommand->a;
     ascending_trigger = gamepadCommand->x;
-    descending_trigger = gamepadCommand->y;
+    descending_trigger = gamepadCommand->b;
     //ground_trigger = gamepadCommand->b;
     cancel_trigger = gamepadCommand->rightBumper;
-    stair_trigger = gamepadCommand->b;
+    stair_trigger = gamepadCommand->y;
     
   }
   // Warning!!!!
