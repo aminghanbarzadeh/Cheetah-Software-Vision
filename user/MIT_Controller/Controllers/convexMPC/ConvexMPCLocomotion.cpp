@@ -13,6 +13,10 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+
+#include <lcm/lcm-cpp.hpp>
+#include "Network.hpp"
+#include "PredictionMsg.hpp"
 //#define DRAW_DEBUG_SWINGS
 //#define DRAW_DEBUG_PATH
 //RobotState robotst;
@@ -25,14 +29,142 @@ const double stair_edge_tolerance = 0.04;
 const double adjustment = 0.003;
 
 const int steps = 5;
-const double delta = .067;
+const double delta = .05;
 const double runstairs = .25;
-const int cycletime = 4;
+const int cycletime = 8;
 const double stair_start = 0.3;
-const double bezierHeight = delta + .05;
+const double bezierHeight = 0.1;
+Vec4<double> footposnn;
+static lcm::LCM network_h;
+Network netwrok_data;
+
+
 ////////////////////
 // Controller
 ////////////////////
+std::string log_filename_v_des_x = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/Thesis_output/v_des_x.txt";
+std::string log_filename_v_des_z = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/Thesis_output/v_des_z.txt";
+std::string log_filename_position_x = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/Thesis_output/position_x.txt";
+std::string log_filename_position_z = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/Thesis_output/position_z.txt";
+std::string log_filename_rpy_pitch = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/Thesis_output/rpy_pitch.txt";
+std::string log_filename_f_ff = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/Thesis_output/f_ff.txt";
+std::string log_filename_Pf = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/Thesis_output/Pf.txt";
+
+//std::chrono::time_point<std::chrono::high_resolution_clock> start_time_global;
+
+class Handler {
+public:
+    float predictions[4];
+
+    void handleMessage(const lcm::ReceiveBuffer*, const std::string& chan, const PredictionMsg* msg) {
+        // Verify if the message is received
+        std::cout << "Message received on channel: " << chan << std::endl;
+
+        // Update the predictions
+        predictions[0] = msg->leg_1_pred;
+        predictions[1] = msg->leg_2_pred;
+        predictions[2] = msg->leg_3_pred;
+        predictions[3] = msg->leg_4_pred;
+
+        // Print predictions immediately after updating
+        std::cout << "Updated predictions: " << predictions[0] << ", " << predictions[1] << ", "
+                  << predictions[2] << ", " << predictions[3] << std::endl;
+    }
+
+};
+
+
+
+
+
+
+// Function to get elapsed time since the start of the simulation
+// long long time_diff_global() {
+//     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time_global).count();
+// }
+
+void log_velocity_x(const std::string& filename, float time, float v_des_x) {
+    std::ofstream log_file(filename, std::ios::app); // Open in append mode
+    if (log_file.is_open()) {
+        log_file << time << "," << v_des_x << "\n";
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+void log_velocity_z(const std::string& filename, float time, float v_des_z) {
+    std::ofstream log_file(filename, std::ios::app); // Open in append mode
+    if (log_file.is_open()) {
+        log_file << time << "," << v_des_z << "\n";
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+// Log seResult.position[0] to position_x.txt
+void log_position_x(const std::string& filename, float time, float position_x) {
+    std::ofstream log_file(filename, std::ios::app); // Open in append mode
+    if (log_file.is_open()) {
+        log_file << time << "," << position_x << "\n";
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+// Log seResult.position[2] to position_z.txt
+void log_position_z(const std::string& filename, float time, float position_z) {
+    std::ofstream log_file(filename, std::ios::app); // Open in append mode
+    if (log_file.is_open()) {
+        log_file << time << "," << position_z << "\n";
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+// Log seResult.rpy[1] (pitch) to rpy_pitch.txt
+void log_rpy_pitch(const std::string& filename, float time, float rpy_pitch) {
+    std::ofstream log_file(filename, std::ios::app); // Open in append mode
+    if (log_file.is_open()) {
+        log_file << time << "," << rpy_pitch << "\n";
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+void log_f_ff(const std::string& filename, float time, const Vec3<float> f_ff[4]) {
+    std::ofstream log_file(filename, std::ios::app);  // Open in append mode
+    if (log_file.is_open()) {
+        // Write time
+        log_file << time << ",";
+        
+        // Log f_ff for each leg
+        for (int i = 0; i < 4; ++i) {
+            log_file << f_ff[i].transpose();  // Transpose the Vec3 to write in row format (x, y, z)
+            if (i < 3) log_file << ",";       // Separate the legs with commas
+        }
+        log_file << "\n";  // New line after all legs' data
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+void log_Pf(const std::string& filename, float time, const Vec3<float> Pff) {
+    std::ofstream log_file(filename, std::ios::app); // Open in append mode
+    if (log_file.is_open()) {
+        log_file << time << "," << Pff[0] << "," << Pff[2] << "\n"; // Log time, Pf[0], and Pf[2]
+        log_file.close();
+    } else {
+        std::cerr << "Unable to open log file: " << filename << "\n";
+    }
+}
+
+
 
 void initialize_log(const std::string& filename) {
     std::ofstream log_file(filename, std::ios::out); // Open in write mode
@@ -45,7 +177,7 @@ void initialize_log(const std::string& filename) {
 }
 
 
-void log_parameters(const std::string& filename, int horizonLength_, int cycletime_, double bezierHeight_, double delta_, int runstairs_, float pitch_ascension_, float offsetY, const std::vector<Vec3<float>>& allPf, const Vec3<float>& des_vel) {
+void log_parameters(const std::string& filename, int horizonLength_, int cycletime_, double bezierHeight_, double delta_, int runstairs_, float pitch_ascension_, float offsetY, const std::vector<Vec3<float>>& allPf, const Vec3<float>& des_vel, const Vec3<float>& position_desired) {
     std::ofstream log_file(filename, std::ios::app); // Open in append mode
     if (log_file.is_open()) {
         log_file << horizonLength_ << ","
@@ -62,7 +194,8 @@ void log_parameters(const std::string& filename, int horizonLength_, int cycleti
         }
 
         // Log desired velocity
-        log_file << des_vel.transpose() << "\n";
+        log_file << des_vel.transpose() << ",";
+        log_file << position_desired.transpose() << "\n";
 
         log_file.close();
     } else {
@@ -73,7 +206,7 @@ void log_parameters(const std::string& filename, int horizonLength_, int cycleti
 
 
 
-std::string log_filename = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/1_.067_5_-.3078.txt"; // Update the path as needed
+std::string log_filename = "/home/aminghanbarzadeh/Cheetah-Software-Vision/config/NN/1_.1_5_-.4311.txt"; // Update the path as needed
 
 std::vector<double> generate_stair_edges(int count, double start, double step) {
   std::vector<double> stair_edges;
@@ -156,16 +289,16 @@ void ConvexMPCLocomotion::recompute_timing(int iterations_per_mpc) {
   dtMPC = dt * iterations_per_mpc;
 }
 
-auto current_time() {
-  return std::chrono::high_resolution_clock::now();
+// auto current_time() {
+//   return std::chrono::high_resolution_clock::now();
   
-}
-auto time_diff(const std::chrono::time_point<std::chrono::high_resolution_clock>& start) {
-  return std::chrono::duration_cast<std::chrono::milliseconds>(current_time() - start).count();
-  //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(current_time() - start).count() << std::endl;
-  //std::cout << std::chrono::high_resolution_clock::now() << std::endl;
-}
-auto start_time = current_time();
+// }
+// auto time_diff(const std::chrono::time_point<std::chrono::high_resolution_clock>& start) {
+//   return std::chrono::duration_cast<std::chrono::milliseconds>(current_time() - start).count();
+//   //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(current_time() - start).count() << std::endl;
+//   //std::cout << std::chrono::high_resolution_clock::now() << std::endl;
+// }
+// auto start_time = current_time();
 
 void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
 //   if(data._quadruped->_robotType == RobotType::MINI_CHEETAH){
@@ -177,21 +310,21 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
 //     assert(false);
 //   }
 
-  float x_vel_cmd, y_vel_cmd, z_vel_cmd = 0;
+  float x_vel_cmd=0, y_vel_cmd=0, z_vel_cmd = 0;
   float filter(0.1);
 
-  if(data.controlParameters->use_rc){
-    const rc_control_settings* rc_cmd = data._desiredStateCommand->rcCommand;
-    data.userParameters->cmpc_gait = rc_cmd->variable[0];
-    _yaw_turn_rate = -rc_cmd->omega_des[2];
-    x_vel_cmd = rc_cmd->v_des[0];
-    y_vel_cmd = rc_cmd->v_des[1] * 0.5;
-    z_vel_cmd = rc_cmd->v_des[2];
-    _body_height += rc_cmd->height_variation * 0.08;
-  }else{
-    _yaw_turn_rate = data._desiredStateCommand->rightAnalogStick[0]*0.2;
-    x_vel_cmd = data._desiredStateCommand->leftAnalogStick[1]*0.2;
-    y_vel_cmd = data._desiredStateCommand->leftAnalogStick[0]*0.2;
+  // if(data.controlParameters->use_rc){
+  //   const rc_control_settings* rc_cmd = data._desiredStateCommand->rcCommand;
+  //   data.userParameters->cmpc_gait = rc_cmd->variable[0];
+  //   _yaw_turn_rate = -rc_cmd->omega_des[2];
+  //   x_vel_cmd = rc_cmd->v_des[0];
+  //   y_vel_cmd = rc_cmd->v_des[1] * 0.5;
+  //   z_vel_cmd = rc_cmd->v_des[2];
+  //   _body_height += rc_cmd->height_variation * 0.08;
+  // }else{
+  //   _yaw_turn_rate = data._desiredStateCommand->rightAnalogStick[0]*0.2;
+  //   x_vel_cmd = data._desiredStateCommand->leftAnalogStick[1]*0.2;
+  //   y_vel_cmd = data._desiredStateCommand->leftAnalogStick[0]*0.2;
     //z_vel_cmd = data._desiredStateCommand->rightAnalogStick[0]*0.2;
     // std::thread timer_thread([&]() {
     //     std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -200,18 +333,18 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
     // });
     
     //std::cout <<  << std::endl;
-    if (time_diff(start_time) >= 15000) {
-      data._desiredStateCommand->ascending_trigger = true;
-      std::cout << "Parameter set to true after 5 seconds." << std::endl;
-    //         // Reset the start time to avoid repeatedly setting the parameter
-      start_time = current_time();
-    }
+    //if (time_diff(start_time) >= 11000) {
+       //data._desiredStateCommand->ascending_trigger = true;
+       //std::cout << "Parameter set to true after 5 seconds." << std::endl;
+    // //         // Reset the start time to avoid repeatedly setting the parameter
+    //   //start_time = current_time();
+    //}
     if(data._desiredStateCommand->ascending_trigger || asc){
       
       //z_vel_cmd = x_vel_cmd * 0.364;
       asc = true;
       _pitch_des = pitch_ascension;
-      x_vel_cmd = 0.3;
+      x_vel_cmd = 0.2;
 
     }
     else if (data._desiredStateCommand->descending_trigger || descending)
@@ -239,7 +372,7 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
     }
  
     //std::cout << "se++++++++++++++++++++++++++++ " << data._desiredStateCommand->cancel_trigger << std::endl;
-  }
+  //}
   _x_vel_des = _x_vel_des*(1-filter) + x_vel_cmd*filter;
   _y_vel_des = _y_vel_des*(1-filter) + y_vel_cmd*filter;
   _z_vel_des = _z_vel_des*(1-filter) + z_vel_cmd*filter;
@@ -251,7 +384,25 @@ void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
 template<>
 void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
   bool omniMode = false;
+  lcm::LCM lc;
+  if(!lc.good()) {
+    std::cerr << "LCM initialization failed!" << std::endl;
+    return;
+  }
 
+  Handler handler;
+  lc.subscribe("prediction_channel", &Handler::handleMessage, &handler);
+  lc.handleTimeout(5);
+  for (int i = 0; i < 4; i++)
+  {
+    
+    if (handler.predictions[i]!= 0)
+    {
+      footposnn[i] = handler.predictions[i];
+    }
+    
+  }
+  
   // Command Setup
   _SetupCommand(data);
   gaitNumber = data.userParameters->cmpc_gait;
@@ -379,6 +530,22 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     world_position_desired += dt * Vec3<float>(v_des_world[0], v_des_world[1], v_des_world[2]);
   }
 
+
+
+  // static bool is_start_time_initialized = false; // Ensure it only happens once
+  // if (!is_start_time_initialized) {
+  //   //start_time_global = std::chrono::high_resolution_clock::now();
+  //   is_start_time_initialized = true; // Prevent resetting in the loop
+  // }
+
+  // float current_time = static_cast<float>(time_diff_global()) / 1000.0; 
+  // log_velocity_x(log_filename_v_des_x, current_time, v_des_world[0]);
+  // log_velocity_z(log_filename_v_des_z, current_time, v_des_world[2]);
+  // log_position_x(log_filename_position_x, current_time, seResult.position[0]);
+  // log_position_z(log_filename_position_z, current_time, seResult.position[2]);
+  // log_rpy_pitch(log_filename_rpy_pitch, current_time, seResult.rpy[1]);
+  // log_f_ff(log_filename_f_ff, current_time, f_ff);
+  
   // some first time initialization
   if(firstRun)
   {
@@ -430,7 +597,7 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     //if(firstSwing[i]) {
     //footSwingTrajectories[i].setHeight(.05);
     footSwingTrajectories[i].setHeight(bezierHeight);
-    Vec3<float> offset(0, side_sign[i] * .065, 0);
+    Vec3<float> offset(0, side_sign[i] * .105, 0);
     Vec3<float> pRobotFrame = (data._quadruped->getHipLocation(i) + offset);
     pRobotFrame[1] += interleave_y[i] * v_abs * interleave_gain;
     
@@ -456,8 +623,26 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     {
       Pf[0] -= 0.1;
     }
-    
-   
+  std::chrono::time_point<std::chrono::steady_clock> timesteps;
+  //LCM publish data
+  netwrok_data.cycletime = cycletime;
+  netwrok_data.bezierheight = bezierHeight;
+  netwrok_data.delta = delta;
+  netwrok_data.runstairs = runstairs;
+  netwrok_data.pitch_ascension = pitch_ascension;
+  netwrok_data.offsety = 0.105;
+  netwrok_data.xvelocity = des_vel[0];
+  netwrok_data.zvelocity = des_vel[2];
+
+  if (des_vel[0] != 0)
+  {
+    timesteps = std::chrono::steady_clock::now();
+    auto now_in_seconds = std::chrono::duration_cast<std::chrono::seconds>(timesteps.time_since_epoch()).count();
+
+    netwrok_data.timestep = now_in_seconds/((stair_start+0.1+(runstairs*steps))/des_vel[0]);
+  }
+  
+  network_h.publish("inputdatas" , &netwrok_data);  
 
 //      Vec3<float> Pf = seResult.position + seResult.rBody.transpose() * (pFoot[i]
 //    + seResult.vWorld * swingTimeRemaining[i];
@@ -480,6 +665,8 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
 
     Pf[0] +=  pfx_rel;
     Pf[1] +=  pfy_rel;
+    Pf[2] = footposnn[i];
+    std::cout << "stance********************: " << footposnn[i]<< std::endl;
     //Pf[2] += pfz_rel;
     // if (contactStates[i] != 0)
     // {
@@ -496,7 +683,7 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     //   Pf[2] += (data._legController->datas[i].p[2] - (bezierHeight-(bezierHeight * (swingStates[i]-0.5) * 2)));
     //   //std::cout << "comedown*****************: " << contactStates[i]<< std::endl;
     // }
-    Pf[2] += (data._legController->datas[i].p[2] - 0.003); //-0.0005 + pFoot[i][2];//+ (seResult.position[2] - 0.28);
+    //Pf[2] += (data._legController->datas[i].p[2] - 0.003); //-0.0005 + pFoot[i][2];//+ (seResult.position[2] - 0.28);
     // if (i == 0)
     // {
     //   std::cout << "contactstates:  "<< -0.0005 + pFoot[i][2] << "  ground:  " << Pf[2] << std::endl;
@@ -595,15 +782,15 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     //   Pf[2] = 5*delta- adjustment;
 
     // Determine the step based on the foot x position
-    determine_z_position(Pf[0], Pf[2]);
+    // determine_z_position(Pf[0], Pf[2]);
 
-    if (Pf[0] > 0.2 + stair_start+(steps*runstairs))
-    {
-      Pf[2] = steps*delta - adjustment;
-      pitch_ascension = 0;
-      _x_vel_des = 0.05;
+    // if (Pf[0] > 0.2 + stair_start+(steps*runstairs))
+    // {
+    //   Pf[2] = steps*delta - adjustment;
+    //   pitch_ascension = 0;
+    //   _x_vel_des = 0.05;
 
-    }
+    // }
 
       // if (Pf[0] < 1.425)
       // {
@@ -626,30 +813,36 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     //   Pf[2] = 0.36397*(1.353-Pf[0]+2.35);
     // }           
     
-    if (asc)
-    {
-      for (int inumber = 0; inumber < steps; inumber++)
-      {
+    // if (asc)
+    // {
+    //   for (int inumber = 0; inumber < steps; inumber++)
+    //   {
         
-        if ((Pf[0] - stair_edges[inumber]) < stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) > 0)
-        {  
-          Pf[0] += stair_edge_tolerance;
-        }
-        else if ((Pf[0] - stair_edges[inumber]) > -stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) < 0)
-        { 
-          Pf[0] -= stair_edge_tolerance;
-        }
-      }
-    }
+    //     if ((Pf[0] - stair_edges[inumber]) < stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) > 0)
+    //     {  
+    //       Pf[0] += stair_edge_tolerance;
+    //     }
+    //     else if ((Pf[0] - stair_edges[inumber]) > -stair_edge_tolerance && (Pf[0] - stair_edges[inumber]) < 0)
+    //     { 
+    //       Pf[0] -= stair_edge_tolerance;
+    //     }
+    //   }
+    // }
 
     
     //std::cout << "pffff:  "<< Pf[2] << std::endl;
     //std::cout << "pfffx:  "<< Pf[0] << std::endl;
     //std::cout << "pfootx:  "<< pFoot[i] << std::endl;
-    //std::cout << "contactstates:  "<< Pf[0] << std::endl;
-    //std::cout << "************************: " << stair_edges[inumber] << std::endl;
+    std::cout << "z pos:  "<< Pf[2] << std::endl;
+
+
+
+
     footSwingTrajectories[i].setFinalPosition(Pf);
-    
+    if (i == 0 && contactStates[i] != 0)
+    {
+      //log_Pf(log_filename_Pf, current_time, Pf);
+    }
     allPf[i] = Pf; // Store the foot position
     offsetY = std::abs(offset[1]); // Store the absolute value of the second component of the offset
     des_vel0 = des_vel; // Store the desired velocity
@@ -664,7 +857,7 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
   double delta1 = delta;
   int runstairs1 = runstairs;
   float pitch_ascension0 = pitch_ascension;
-  log_parameters(log_filename, horizonLength1, cycletime1, bezierHeight1, delta1, runstairs1, pitch_ascension0, offsetY, allPf, des_vel0);
+  log_parameters(log_filename, horizonLength1, cycletime1, bezierHeight1, delta1, runstairs1, pitch_ascension0, offsetY, allPf, des_vel0, world_position_desired);
   
   // calc gait
   iterationCounter++;

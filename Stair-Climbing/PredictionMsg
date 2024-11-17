@@ -1,0 +1,6 @@
+struct PredictionMsg {
+    double leg_1_pred;
+    double leg_2_pred;
+    double leg_3_pred;
+    double leg_4_pred;
+}

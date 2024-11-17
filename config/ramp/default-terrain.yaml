@@ -1,0 +1,87 @@
+ground-plane:
+  type: "infinite-plane"
+  mu: 0.7
+  restitution: 0.0
+  #height: -0.5
+  height: 0.0
+  graphicsSize: [50, 50] # how large the plane appears
+  checkers: [100, 100] # how many checkers are on the plane
+  
+  
+####stair-bridge####
+## 25cm
+#box-22:
+  type: "box"
+  mu: 0.7
+  restitution: 0
+  depth: 1
+  width: 1.2
+  height: 0.5
+  #position:  [1.5, 0, 0.025]
+  position: [2.32, 0.0, 0.0]
+  orientation: [0, 0.0, 0] # roll pitch yaw
+  transparent: 0
+ 
+ 
+#slopes-31:
+  type: "slopes"
+  length: 2.92
+  width: 1.2
+  slope: 20
+  direction: 0
+  mu: 0.7
+  restitution: 0
+  position: [0.3,0,0]
+  transparent: 0
+ 
+ 
+  
+#stairs-21:
+  type: "stairs"
+  steps: 5
+  rise: .05
+  run: .25
+  width: 1.2
+  mu: .7
+  restitution: 0
+  #position: [0.5, 0, -0.52]
+  position: [0.3, 0, 0.0]
+  orientation: [0, 0, 0]
+  transparent: 0
+  
+  
+  
+  ####slope-bridge####
+##  25cm
+#box-32:
+    type: "box"
+    mu: 0.7
+    restitution: 0
+    depth: 0.001
+    width: 0.001
+    height: 1
+    position:  [0.558, 0., 0]
+    orientation: [0,.0,0]
+    transparent: 0
+
+#slopes-31:
+    type: "slopes"
+    length: 2
+    width: 1.5
+    slope: 20
+    direction: 0
+    mu: 0.7
+    restitution: 0
+    position: [1.5,0,0]
+    transparent: 0
+
+#slopes-32:
+    type: "slopes"
+    length: 2
+    width: 1.5
+    slope: 20
+    direction: 180
+    mu: .7
+    restitution: 0
+    position: [4.5,0,0]
+    transparent: 0

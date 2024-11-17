@@ -23,7 +23,7 @@ rm -f $SIGNAL_FILE
 
 # Increment value
 INCREMENT=0.0
-INCREMENT1=0.005
+INCREMENT1=0.0
 INCREMENT2=0.0
 INCREMENT3=0
 # Function to extract the current C++ parameter value
@@ -198,7 +198,7 @@ do
   run_parameter_value=$(echo "$current_run_value_yaml + $INCREMENT2" | bc)
   cycle_parameter_value=$(echo "$current_cycle_value + $INCREMENT3" | bc)
   # Calculate pitch_ascension in radians
-  pitch_ascension=$(echo "scale=4; -a(($yaml_parameter_value / $current_run_value_yaml)+ 0.05)" | bc -l)
+  pitch_ascension=$(echo "scale=4; -a(($yaml_parameter_value / $current_run_value_yaml)+ 0.06)" | bc -l)
   
   echo "New C++ parameter value: $parameter_value"
   echo "New YAML parameter value: $yaml_parameter_value"

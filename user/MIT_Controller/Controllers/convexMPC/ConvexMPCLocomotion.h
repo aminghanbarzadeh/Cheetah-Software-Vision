@@ -175,7 +175,7 @@ std::vector<double> stair_edges;
   double zpos_sum = 0;
   //bool ascending = false;
   float Pframp = 0;
-  float pitch_ascension = -.3078;
+  float pitch_ascension = -.25;
   float pitch_descension = 0.3;
   //float locomo = 0;
 };
