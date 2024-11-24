@@ -35,7 +35,7 @@ class ImuSimulator {
 
   void updateVectornav(const FBModelState<T>& robotState,
                        const FBModelStateDerivative<T>& robotStateD,
-                       VectorNavData* data);
+                       IMUData* data);
 
 
   void computeAcceleration(const FBModelState<T>& robotState,

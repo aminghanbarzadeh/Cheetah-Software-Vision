@@ -10,11 +10,15 @@
 void DrawList::loadFiles() {
   printf("[DrawList] Load object files...\n");
   std::vector<std::string> names = {
-      "c3_body.obj",         "mini_abad.obj",
-      "c3_upper_link.obj",   "c3_lower_link.obj",
-      "mini_body.obj",       "mini_abad.obj",
-      "mini_upper_link.obj", "mini_lower_link.obj",
-      "sphere.obj",          "cube.obj"};
+      "c3_body.obj",                   "mini_abad.obj",
+      "c3_upper_link.obj",             "c3_lower_link.obj",
+      "mini_body.obj",                 "mini_abad.obj",
+      "mini_upper_link.obj",           "mini_lower_link.obj",
+      "sphere.obj",                    "cube.obj",
+      "iust_body.obj",                 "iust_abad.obj",
+      "iust_upper_link_mirror.obj",    "iust_upper_link.obj",
+      "iust_lower_link.obj"
+      };
   for (const auto& name : names) {
     std::string filename = _baseFileName + name;
     _vertexData.emplace_back();
@@ -39,6 +43,7 @@ void DrawList::loadFiles() {
   _cubeLoadIndex = 9;
   _miniCheetahLoadIndex = 4;
   _cheetah3LoadIndex = 0;
+  _iustLoadIndex =  10;
 }
 /*!
  * Load the cheetah 3 model and build the draw list.
@@ -220,6 +225,110 @@ size_t DrawList::addMiniCheetah(Vec4<float> color, bool useOld, bool canHide) {
   // for(u32 i = 0; i < _canBeHidden.size(); i++) {
   //   printf(" [%02d] %d\n", i, _canBeHidden[i]);
   // }
+  return j0;
+}
+
+/*!
+ * Load the iust robot model and builds the draw list.
+ * Returns an index number that can later be used to update the position of the
+ * robot.
+ */
+size_t DrawList::addIUST(Vec4<float> color, bool useOld, bool canHide) {
+
+  size_t i0 = _iustLoadIndex;
+  size_t j0 = _nTotal;
+
+  // set model offset
+  QMatrix4x4 bodyOffset, lower, eye;
+  QMatrix4x4 abadOffsets[4], upperOffsets[4];
+  eye.setToIdentity();
+
+  // body
+  bodyOffset.setToIdentity();
+  //bodyOffset.rotate(90, 0, 0, 1);
+
+  // abads
+  abadOffsets[0].setToIdentity();  // FR
+  abadOffsets[0].rotate(180, 1, 0, 0);
+
+  abadOffsets[1].setToIdentity();  // FL
+
+  abadOffsets[2].setToIdentity();  // RR
+  abadOffsets[2].rotate(180, 0, 0, 1);
+
+  abadOffsets[3].setToIdentity();  // RL
+  abadOffsets[3].rotate(180, 0, 0, 1);
+  abadOffsets[3].rotate(180, 1, 0, 0);
+
+  // upper
+  upperOffsets[0].setToIdentity();  // right
+  upperOffsets[0].rotate(180, 0, 0, 1);
+
+  upperOffsets[1].setToIdentity();  // left
+  upperOffsets[1].rotate(180, 0, 0, 1);
+
+  // lower
+  lower.setToIdentity();
+  lower.rotate(180, 0, 0, 1);
+
+
+  SolidColor bodyColor, abadColor, link1Color, link2Color;
+  bodyColor.rgba = useOld ? Vec4<float>(1, 0.05, 0.05, 1.0) : color;
+  bodyColor.useSolidColor = true;
+
+  abadColor.rgba = useOld ? Vec4<float>(0, 0, 0, 0.9) : color;
+  abadColor.useSolidColor = true;
+
+  link1Color.rgba = useOld ? Vec4<float>(0, 0, 0, 0.9) : color;
+  link1Color.useSolidColor = true;
+
+  link2Color.rgba = useOld ? Vec4<float>(0, 0, 0, 0.9) : color;
+  link2Color.useSolidColor = true;
+
+  _canBeHidden.push_back(canHide);
+
+  // add objects
+  // BODY
+  _objectMap.push_back(i0 + 0);
+  _modelOffsets.push_back(bodyOffset);
+  _kinematicXform.push_back(eye);
+  _instanceColor.push_back(bodyColor);
+  _nTotal++;
+
+  for (int i = 0; i < 4; i++) {
+    // HIP
+    _objectMap.push_back(i0 + 1);
+    _canBeHidden.push_back(canHide);
+    _modelOffsets.push_back(abadOffsets[i]);
+    _kinematicXform.push_back(eye);
+    _instanceColor.push_back(abadColor);
+
+    // UPPER LINK
+    if (i%2 == 0) {
+      // RIGHT
+      _objectMap.push_back(i0 + 2);
+      _canBeHidden.push_back(canHide);
+      _modelOffsets.push_back(upperOffsets[i % 2]);
+      _kinematicXform.push_back(eye);
+      _instanceColor.push_back(link1Color);
+    } else {
+      // LEFT
+      _objectMap.push_back(i0 + 3);
+      _canBeHidden.push_back(canHide);
+      _modelOffsets.push_back(upperOffsets[i % 2]);
+      _kinematicXform.push_back(eye);
+      _instanceColor.push_back(link1Color);
+    }
+
+    // LOWER LINK
+    _objectMap.push_back(i0 + 4);
+    _canBeHidden.push_back(canHide);
+    _modelOffsets.push_back(lower);
+    _kinematicXform.push_back(eye);
+    _instanceColor.push_back(link2Color);
+    _nTotal += 3;
+  }
+
   return j0;
 }
 

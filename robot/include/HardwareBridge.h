@@ -26,8 +26,11 @@
 #include "microstrain_lcmt.hpp"
 #include "ecat_command_t.hpp"
 #include "ecat_data_t.hpp"
-
-
+#include "actuator_command_t.hpp"
+#include "actuator_response_t.hpp"
+#include "rt/rt_can.h"
+#include "Utilities/SharedMemory.h"
+#include "SimUtilities/SimulatorMessage.h"
 
 /*!
  * Interface between robot and hardware
@@ -85,6 +88,53 @@ class HardwareBridge {
 };
 
 /*!
+ * Interface between robot and hardware specialized for IUST robot
+ */
+class IUSTrobotHardwareBridge : public HardwareBridge {
+public:
+  /*!
+   * Constructor for IUSTrobotHardwareBridge
+   * 
+   * @param rc Pointer to the RobotController object
+   * @param load_parameters_from_file Boolean value indicating whether to load parameters from a file
+   */
+  IUSTrobotHardwareBridge (RobotController* rc, bool load_parameters_from_file);
+  /*!
+   * Runs the SPI
+   */
+  void runCAN();
+  /*!
+   * Initializes the hardware
+   */
+  void initHardware();
+  /*!
+   * Runs the robot
+   */
+  void run();
+  /*!
+   * Runs the Microstrain
+   */
+  void runMicrostrain();
+  /*!
+   * Logs the Microstrain data
+   */
+  void logMicrostrain();
+
+private:
+  CAN CANable;
+  IMUData _vectorNavData;
+  lcm::LCM _spiLcm;
+  lcm::LCM _microstrainLcm;
+  std::thread _microstrainThread;
+  LordImu _microstrainImu;
+  microstrain_lcmt _microstrainData;
+  bool _microstrainInit = false;
+  bool _load_parameters_from_file;
+  u64 spi_times=0;
+};
+
+
+/*!
  * Interface between robot and hardware specialized for Mini Cheetah
  */
 class MiniCheetahHardwareBridge : public HardwareBridge {
@@ -99,7 +149,7 @@ class MiniCheetahHardwareBridge : public HardwareBridge {
   void abort(const char* reason);
 
  private:
-  VectorNavData _vectorNavData;
+  IMUData _vectorNavData;
   lcm::LCM _spiLcm;
   lcm::LCM _microstrainLcm;
   std::thread _microstrainThread;
@@ -119,7 +169,7 @@ public:
   // todo imu?
 
 private:
-  VectorNavData _vectorNavData;
+  IMUData _vectorNavData;
   lcm::LCM _ecatLCM;
   ecat_command_t ecatCmdLcm;
   ecat_data_t ecatDataLcm;

@@ -18,15 +18,15 @@
  */
 template <typename T>
 FSM_State_Vision<T>::FSM_State_Vision(
-        ControlFSMData<T>* _controlFSMData)
-        : FSM_State<T>(_controlFSMData, FSM_StateName::VISION, "VISION"),
-          vision_MPC(_controlFSMData->controlParameters->controller_dt,
-                     30 / (1000. * _controlFSMData->controlParameters->controller_dt),
-                     _controlFSMData->userParameters),
-          cMPCOld(_controlFSMData->controlParameters->controller_dt,
-                  30 / (1000. * _controlFSMData->controlParameters->controller_dt),
-                  _controlFSMData->userParameters),
-          _visionLCM(getLcmUrl(255))
+    ControlFSMData<T>* _controlFSMData)
+    : FSM_State<T>(_controlFSMData, FSM_StateName::VISION, "VISION"),
+        vision_MPC(_controlFSMData->controlParameters->controller_dt,
+                30 / (1000. * _controlFSMData->controlParameters->controller_dt),
+                _controlFSMData->userParameters),
+        cMPCOld(_controlFSMData->controlParameters->controller_dt,
+                30 / (1000. * _controlFSMData->controlParameters->controller_dt),
+                _controlFSMData->userParameters,120,_controlFSMData->_quadruped->_robotType),
+                _visionLCM(getLcmUrl(255))
 {
     // Set the safety checks
     this->turnOnAllSafetyChecks();

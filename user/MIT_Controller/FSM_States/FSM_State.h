@@ -12,6 +12,7 @@
 // Normal robot states
 #define K_PASSIVE 0
 #define K_STAND_UP 1
+#define K_SQUAT_DOWN 2
 #define K_BALANCE_STAND 3
 #define K_LOCOMOTION 4
 #define K_LOCOMOTION_TEST 5
@@ -40,7 +41,8 @@ enum class FSM_StateName {
   RECOVERY_STAND,
   VISION,
   BACKFLIP,
-  FRONTJUMP
+  FRONTJUMP,
+  SQUAT_DOWN
 };
 
 /**

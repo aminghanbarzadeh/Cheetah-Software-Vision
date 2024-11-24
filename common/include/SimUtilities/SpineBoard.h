@@ -57,7 +57,7 @@ class SpineBoard {
  public:
   SpineBoard() {}
   void init(float side_sign, s32 board);
-  void run();
+  void run(bool iust);
   void resetData();
   void resetCommand();
   SpiCommand* cmd = nullptr;
@@ -67,13 +67,18 @@ class SpineBoard {
  private:
   float side_sign;
   s32 board_num;
-  const float max_torque[3] = {17.f, 17.f, 26.f};  // TODO CHECK WITH BEN
-  const float wimp_torque[3] = {6.f, 6.f, 6.f};    // TODO CHECK WITH BEN
+  const float iust_max_torque[3] = {48.f, 48.f, 48.f};
+  const float wimp_torque[3] = {6.f, 6.f, 6.f};
   const float disabled_torque[3] = {0.f, 0.f, 0.f};
-  const float q_limit_p[3] = {1.5f, 5.0f, 0.f};
-  const float q_limit_n[3] = {-1.5f, -5.0f, 0.f};
-  const float kp_softstop = 100.f;
-  const float kd_softstop = 0.4f;
+  const float iust_q_limit_upper[3] = {0.75f, 0.85f, 2.87f};
+  const float iust_q_limit_low[3] = {-1.5f, -4.28f, 0.65f};
+  const float iust_kp_softstop = 350.f;
+  const float iust_kd_softstop = 5.f;
+  float max_torque[3] = {17.f, 17.f, 26.f};
+  float q_limit_upper[3] = {1.5f, 5.0f, 0.f};
+  float q_limit_low[3] = {-1.5f, -5.0f, 0.f};
+  float kp_softstop = 100.f;
+  float kd_softstop = 0.4f;
   s32 iter_counter = 0;
 };
 

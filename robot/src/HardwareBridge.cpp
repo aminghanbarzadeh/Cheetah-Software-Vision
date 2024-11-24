@@ -22,7 +22,7 @@
 #include "Utilities/Utilities_print.h"
 
 #define USE_MICROSTRAIN
-
+#define IUST_CTRL
 /*!
  * If an error occurs during initialization, before motors are enabled, print
  * error and exit.
@@ -589,4 +589,245 @@ void Cheetah3HardwareBridge::run() {
   }
 }
 
+/*
+ * ======================================================================================
+ * Following class functions are specifically defined for IUST robot
+ */
+IUSTrobotHardwareBridge::IUSTrobotHardwareBridge(RobotController* robot_ctrl, bool load_parameters_from_file)
+        : HardwareBridge(robot_ctrl), _spiLcm(getLcmUrl(255)), _microstrainLcm(getLcmUrl(255)) {
+    _load_parameters_from_file = load_parameters_from_file;
+}
+/*!
+ * Initialize IUST specific hardware
+ */
+void IUSTrobotHardwareBridge::initHardware() {
+    _vectorNavData.quat << 1, 0, 0, 0;
+    printf("[IUSTHardware] I am using hardwareBridge:)\n");
+#ifndef USE_MICROSTRAIN
+    printf("[IUSTHardware] Init vectornav\n");
+  if (!init_vectornav(&_vectorNavData)) {
+    printf("Vectornav failed to initialize\n");
+    //initError("failed to initialize vectornav!\n", false);
+  }
 #endif
+    CANable.init_can();
+    _microstrainInit = _microstrainImu.tryInit(0,460800 );//921600
+}
+/*!
+ * Main method for IUST robot hardware
+ */
+void IUSTrobotHardwareBridge::run() {
+    initCommon();
+    initHardware();
+
+    if(_load_parameters_from_file) {
+        printf("[Hardware Bridge] Loading parameters from file...\n");
+
+        try {
+            _robotParams.initializeFromYamlFile(THIS_COM "config/iust-robot-parameters.yaml");
+        } catch(std::exception& e) {
+            printf("[Hardware Bridge] Failed to initialize robot parameters from yaml file: %s\n", e.what());
+            exit(1);
+        }
+
+        if(!_robotParams.isFullyInitialized()) {
+            printf("[Hardware Bridge] Failed to initialize all robot parameters\n");
+            exit(1);
+        }
+
+        printf("[Hardware Bridge] Loaded robot parameters\n");
+
+        if(_userControlParameters) {
+            try {
+                #ifdef CMPC_CTRL
+                _userControlParameters->initializeFromYamlFile(THIS_COM "config/iust-user-parameters-full.yaml");
+                std::string yamlName = "iust-user-parameters.yaml";
+                printf("[Hardware Bridge] Loaded user parameters from yaml file: %s\n", yamlName.c_str());
+                #endif
+                #ifdef JPOS_CTRL
+                _userControlParameters->initializeFromYamlFile(THIS_COM "config/jpos-user-parameters.yaml");
+                std::string yamlName = "jpos-user-parameters.yaml";
+                printf("[Hardware Bridge] Loaded user parameters from yaml file: %s\n", yamlName.c_str());
+                #endif
+                #ifdef SPI_CTRL
+                _userControlParameters->initializeFromYamlFile(THIS_COM "config/no-parameters.yaml");
+                std::string yamlName = "no-parameters.yaml";
+                printf("[Hardware Bridge] Loaded user parameters from yaml file: %s\n", yamlName.c_str());
+                #endif
+                #ifdef LOWLEVEL_CTRL
+                _userControlParameters->initializeFromYamlFile(THIS_COM "config/lowlevel-user-parameters.yaml");
+                std::string yamlName = "lowlevel-user-parameters.yaml";
+                printf("[Hardware Bridge] Loaded user parameters from yaml file: %s\n", yamlName.c_str());
+                #endif
+                #ifdef IUST_CTRL
+                _userControlParameters->initializeFromYamlFile(THIS_COM "config/iust-user-parameters.yaml");
+                std::string yamlName = "iust-user-parameters.yaml";
+                printf("[Hardware Bridge] Loaded user parameters from yaml file: %s\n", yamlName.c_str());
+                #endif
+
+            } catch(std::exception& e) {
+                printf("Failed to initialize user parameters from yaml file: %s\n", e.what());
+                exit(1);
+            }
+
+            if(!_userControlParameters->isFullyInitialized()) {
+                printf("[Hardware Bridge] Failed to initialize all user parameters\n");
+                exit(1);
+            }
+
+            printf("[Hardware Bridge] Loaded user parameters\n");
+        } else {
+            printf("[Hardware Bridge] Did not load user parameters because there aren't any\n");
+        }
+    } else {
+        printf("[Hardware Bridge] Loading parameters over LCM...\n");
+        while (!_robotParams.isFullyInitialized()) {
+            printf("[Hardware Bridge] Waiting for robot parameters...\n");
+            usleep(1000000);
+        }
+
+        if(_userControlParameters) {
+            while (!_userControlParameters->isFullyInitialized()) {
+                printf("[Hardware Bridge] Waiting for user parameters...\n");
+                usleep(1000000);
+            }
+        }
+    }
+
+
+
+    printf("[Hardware Bridge] Got all parameters, starting up!\n");
+
+    _robotRunner = new RobotRunner(_controller, &taskManager, _robotParams.controller_dt, "robot-control");
+
+    _robotRunner->driverCommand = &_gamepadCommand;
+    _robotRunner->spiData = &_spiData;
+    _robotRunner->spiCommand = &_spiCommand;
+    _robotRunner->robotType = RobotType::IUST;
+    _robotRunner->vectorNavData = &_vectorNavData;
+    _robotRunner->controlParameters = &_robotParams;
+    _robotRunner->visualizationData = &_visualizationData;
+    _robotRunner->cheetahMainVisualization = &_mainCheetahVisualization;
+
+    _firstRun = false;
+
+    // init control thread
+
+    statusTask.start();
+
+    // spi Task start
+    PeriodicMemberFunction<IUSTrobotHardwareBridge> canTask(
+            &taskManager, .002, "can", &IUSTrobotHardwareBridge::runCAN, this);
+    canTask.start();
+
+    // microstrain
+    if(_microstrainInit)
+        _microstrainThread = std::thread(&IUSTrobotHardwareBridge::runMicrostrain, this);
+
+    // robot controller start
+    _robotRunner->start();
+
+    // visualization start
+    PeriodicMemberFunction<IUSTrobotHardwareBridge> visualizationLCMTask(
+            &taskManager, .0167, "lcm-vis",
+            &IUSTrobotHardwareBridge::publishVisualizationLCM, this);
+    visualizationLCMTask.start();
+
+    // rc controller
+    _port = init_sbus(false);  // Not Simulation
+    PeriodicMemberFunction<HardwareBridge> sbusTask(
+            &taskManager, .005, "rc_controller", &HardwareBridge::run_sbus, this);
+    sbusTask.start();
+
+    // temporary hack: microstrain logger
+    PeriodicMemberFunction<IUSTrobotHardwareBridge> microstrainLogger(
+            &taskManager, .001, "microstrain-logger", &IUSTrobotHardwareBridge::logMicrostrain, this);
+    microstrainLogger.start();
+
+    for (;;) {
+        usleep(1000000);
+        // printf("joy %f\n", _robotRunner->driverCommand->leftStickAnalog[0]);
+    }
+}
+
+void IUSTrobotHardwareBridge::runMicrostrain() {
+    printf("[HardwareBridge] Start microstrain\n");
+    u64 imu_times=0;
+
+    while (true) {
+        _microstrainImu.run();
+
+        #ifdef USE_MICROSTRAIN
+        _vectorNavData.accelerometer = _microstrainImu.acc;
+        _vectorNavData.quat[0] = _microstrainImu.quat[1];
+        _vectorNavData.quat[1] = _microstrainImu.quat[2];
+        _vectorNavData.quat[2] = _microstrainImu.quat[3];
+        _vectorNavData.quat[3] = _microstrainImu.quat[0];
+        _vectorNavData.gyro = _microstrainImu.gyro;
+        #endif
+        imu_times++;
+        #ifdef IMU_DEBUG_SHOW
+        if(imu_times%1000==0)
+        {
+            printf("Iteration stamp:\t%d\n",(int)imu_times);
+            printf("--------------------------------------------------\n");
+            printf("ACC = [%f, %f, %f]\n", _imuData.accelerometer[0], _imuData.accelerometer[1], _imuData.accelerometer[2]);
+            printf("QUAT = [%f, %f, %f, %f]\n", _imuData.quat[0], _imuData.quat[1], _imuData.quat[2], _imuData.quat[3]);
+            printf("GYRO =[%f, %f, %f]\n", _imuData.gyro[0], _imuData.gyro[1], _imuData.gyro[2]);
+            printf("--------------------------------------------------\n");
+        }
+        #endif
+    }
+}
+
+void IUSTrobotHardwareBridge::logMicrostrain() {
+    _microstrainImu.updateLCM(&_microstrainData);
+    _microstrainLcm.publish("microstrain", &_microstrainData);
+}
+/*!
+ * Run IUST Cheetah SPI
+ */
+void IUSTrobotHardwareBridge::runCAN() {
+    std::cout << ":)))\n";
+    actuator_command_t* cmd = CANable.get_can_command(); 
+    actuator_response_t* data = CANable.get_can_data();
+
+    // Send and Receive data and commands through CAN hardware for leg-level controller
+    CANable.can_send_receive(cmd, data);
+
+    #ifdef SPI_DEBUG_SHOW
+    if(spi_times%1000==0)
+        {
+            printf("Iteration stamp:\t%d\n",(int)spi_times);
+            printf("--------------------DATA--------------------------\n");
+            printf("ABAD Q = [%f, %f, %f, %f]\n", data->q_abad[0],data->q_abad[1],data->q_abad[2],data->q_abad[3]);
+            printf("HIP  Q = [%f, %f, %f, %f]\n", data->q_hip[0],data->q_hip[1],data->q_hip[2],data->q_hip[3]);
+            printf("KNEE Q = [%f, %f, %f, %f]\n", data->q_knee[0],data->q_knee[1],data->q_knee[2],data->q_knee[3]);
+            printf("ABAD QD = [%f, %f, %f, %f]\n", data->qd_abad[0],data->qd_abad[1],data->qd_abad[2],data->qd_abad[3]);
+            printf("HIP  QD = [%f, %f, %f, %f]\n", data->qd_hip[0],data->qd_hip[1],data->qd_hip[2],data->qd_hip[3]);
+            printf("KNEE QD = [%f, %f, %f, %f]\n", data->qd_knee[0],data->qd_knee[1],data->qd_knee[2],data->qd_knee[3]);
+            printf("-------------------COMMAND------------------------\n");
+            printf("ABAD DES Q = [%f, %f, %f, %f]\n", _spiCommand.q_des_abad[0],_spiCommand.q_des_abad[1],_spiCommand.q_des_abad[2],_spiCommand.q_des_abad[3]);
+            printf("HIP  DES Q = [%f, %f, %f, %f]\n", _spiCommand.q_des_hip[0],_spiCommand.q_des_hip[1],_spiCommand.q_des_hip[2],_spiCommand.q_des_hip[3]);
+            printf("KNEE DES Q = [%f, %f, %f, %f]\n", _spiCommand.q_des_knee[0],_spiCommand.q_des_knee[1],_spiCommand.q_des_knee[2],_spiCommand.q_des_knee[3]);
+            printf("KP A= [%f, %f, %f, %f]\n", _spiCommand.kp_abad[0],_spiCommand.kp_abad[1],_spiCommand.kp_abad[2],_spiCommand.kp_abad[3]);
+            printf("KP H= [%f, %f, %f, %f]\n", _spiCommand.kp_hip[0],_spiCommand.kp_hip[1],_spiCommand.kp_hip[2],_spiCommand.kp_hip[3]);
+            printf("KP K= [%f, %f, %f, %f]\n", _spiCommand.kp_knee[0],_spiCommand.kp_knee[1],_spiCommand.kp_knee[2],_spiCommand.kp_knee[3]);
+            printf("KD A= [%f, %f, %f, %f]\n", _spiCommand.kd_abad[0],_spiCommand.kd_abad[1],_spiCommand.kd_abad[2],_spiCommand.kd_abad[3]);
+            printf("KD H= [%f, %f, %f, %f]\n", _spiCommand.kd_hip[0],_spiCommand.kd_hip[1],_spiCommand.kd_hip[2],_spiCommand.kd_hip[3]);
+            printf("KD K= [%f, %f, %f, %f]\n", _spiCommand.kd_knee[0],_spiCommand.kd_knee[1],_spiCommand.kd_knee[2],_spiCommand.kd_knee[3]);
+            printf("ABAD DES T = [%f, %f, %f, %f]\n", _spiCommand.tau_abad_ff[0],_spiCommand.tau_abad_ff[1],_spiCommand.tau_abad_ff[2],_spiCommand.tau_abad_ff[3]);
+            printf("HIP  DES T = [%f, %f, %f, %f]\n", _spiCommand.tau_hip_ff[0],_spiCommand.tau_hip_ff[1],_spiCommand.tau_hip_ff[2],_spiCommand.tau_hip_ff[3]);
+            printf("KNEE DES T = [%f, %f, %f, %f]\n", _spiCommand.tau_knee_ff[0],_spiCommand.tau_knee_ff[1],_spiCommand.tau_knee_ff[2],_spiCommand.tau_knee_ff[3]);
+
+            printf("--------------------------------------------------\n");
+        }
+    #endif
+
+    // Nobody subscribe following lcm
+    _spiLcm.publish("spi_data", data);
+    _spiLcm.publish("spi_command", cmd);
+}
+
+#endif
+

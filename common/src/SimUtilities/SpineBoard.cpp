@@ -3,7 +3,7 @@
  */
 
 #include <stdio.h>
-
+#include <iostream>
 #include "SimUtilities/SpineBoard.h"
 
 /*!
@@ -68,7 +68,7 @@ void SpineBoard::resetCommand() {
 /*!
  * Run spine board control
  */
-void SpineBoard::run() {
+void SpineBoard::run(bool iust) {
   iter_counter++;
   if (cmd == nullptr || data == nullptr) {
     printf(
@@ -80,13 +80,29 @@ void SpineBoard::run() {
     return;
   }
 
+  if (iust) {
+    for (int i = 0; i < 3; ++i) {
+      max_torque[i] = iust_max_torque[i];
+      q_limit_upper[i] = iust_q_limit_upper[i];
+      q_limit_low[i] = iust_q_limit_low[i];
+      }
+    kp_softstop = iust_kp_softstop;
+    kd_softstop = iust_kd_softstop;
+  }
+
+//  if IUST robot's abad limitations is different for left and right legs
+  //  if (board_num == 1 || board_num == 3) {  //left[-0.75,1.5]
+  //      q_limit_upper[0] = -iust_q_limit_low[0];
+  //      q_limit_low[0] = -iust_q_limit_upper[0];
+  //  }
+
   /// Check abad softstop ///
-  if (data->q_abad[board_num] > q_limit_p[0]) {
-    torque_out[0] = kp_softstop * (q_limit_p[0] - data->q_abad[board_num]) -
+  if (data->q_abad[board_num] > q_limit_upper[0]) {
+    torque_out[0] = kp_softstop * (q_limit_upper[0] - data->q_abad[board_num]) -
                     kd_softstop * (data->qd_abad[board_num]) +
                     cmd->tau_abad_ff[board_num];
-  } else if (data->q_abad[board_num] < q_limit_n[0]) {
-    torque_out[0] = kp_softstop * (q_limit_n[0] - data->q_abad[board_num]) -
+  } else if (data->q_abad[board_num] < q_limit_low[0]) {
+    torque_out[0] = kp_softstop * (q_limit_low[0] - data->q_abad[board_num]) -
                     kd_softstop * (data->qd_abad[board_num]) +
                     cmd->tau_abad_ff[board_num];
   } else {
@@ -98,12 +114,12 @@ void SpineBoard::run() {
   }
 
   /// Check hip softstop ///
-  if (data->q_hip[board_num] > q_limit_p[1]) {
-    torque_out[1] = kp_softstop * (q_limit_p[1] - data->q_hip[board_num]) -
+  if (data->q_hip[board_num] > q_limit_upper[1]) {
+    torque_out[1] = kp_softstop * (q_limit_upper[1] - data->q_hip[board_num]) -
                     kd_softstop * (data->qd_hip[board_num]) +
                     cmd->tau_hip_ff[board_num];
-  } else if (data->q_hip[board_num] < q_limit_n[1]) {
-    torque_out[1] = kp_softstop * (q_limit_n[1] - data->q_hip[board_num]) -
+  } else if (data->q_hip[board_num] < q_limit_low[1]) {
+    torque_out[1] = kp_softstop * (q_limit_low[1] - data->q_hip[board_num]) -
                     kd_softstop * (data->qd_hip[board_num]) +
                     cmd->tau_hip_ff[board_num];
   } else {

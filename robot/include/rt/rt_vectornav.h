@@ -21,7 +21,7 @@ extern "C" {
 }
 #endif
 
-bool init_vectornav(VectorNavData* vd_data);
+bool init_vectornav(IMUData* vd_data);
 
 #endif
 #endif

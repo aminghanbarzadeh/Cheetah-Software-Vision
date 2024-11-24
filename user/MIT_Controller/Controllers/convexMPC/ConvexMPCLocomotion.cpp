@@ -231,7 +231,7 @@ void determine_z_position(float x, float& z) {
   }
 }
 
-ConvexMPCLocomotion::ConvexMPCLocomotion(float _dt, int _iterations_between_mpc, MIT_UserParameters* parameters) :
+ConvexMPCLocomotion::ConvexMPCLocomotion(float _dt, int _iterations_between_mpc, MIT_UserParameters* parameters,  float fmax, RobotType &robotType) :
   iterationsBetweenMPC(_iterations_between_mpc),
   horizonLength(2*cycletime),
   dt(_dt),
@@ -258,7 +258,7 @@ ConvexMPCLocomotion::ConvexMPCLocomotion(float _dt, int _iterations_between_mpc,
   dtMPC = dt * iterationsBetweenMPC;
   default_iterations_between_mpc = iterationsBetweenMPC;
   printf("[Convex MPC] dt: %.3f iterations: %d, dtMPC: %.3f\n", dt, iterationsBetweenMPC, dtMPC);
-  setup_problem(dtMPC, horizonLength, 0.4, 120);
+  setup_problem(dtMPC, horizonLength, 0.4, fmax);
   //setup_problem(dtMPC, horizonLength, 0.4, 650); // DH
   rpy_comp[0] = 0;
   rpy_comp[1] = 0;
@@ -269,14 +269,17 @@ ConvexMPCLocomotion::ConvexMPCLocomotion(float _dt, int _iterations_between_mpc,
 
   for(int i = 0; i < 4; i++)
     firstSwing[i] = true;
+  if (robotType == RobotType::IUST){
+    initMilabSparseMPC();
+  }else{
+    initSparseMPC();
+  }
 
-  initSparseMPC();
+  pBody_des.setZero();
+  vBody_des.setZero();
+  aBody_des.setZero();
 
-   pBody_des.setZero();
-   vBody_des.setZero();
-   aBody_des.setZero();
-
-   initialize_log(log_filename);
+   //initialize_log(log_filename);
 }
 
 void ConvexMPCLocomotion::initialize(){
@@ -301,14 +304,15 @@ void ConvexMPCLocomotion::recompute_timing(int iterations_per_mpc) {
 // auto start_time = current_time();
 
 void ConvexMPCLocomotion::_SetupCommand(ControlFSMData<float> & data){
-//   if(data._quadruped->_robotType == RobotType::MINI_CHEETAH){
-//     zpos_sum += data._desiredStateCommand->rightAnalogStick[0]*0.00002;
-//    // _body_height = 0.29 + zpos_sum;//IUST
-//   }else if(data._quadruped->_robotType == RobotType::CHEETAH_3){
-//     _body_height = 0.45;
-//   }else{
-//     assert(false);
-//   }
+    // if(data._quadruped->_robotType == RobotType::IUST) {
+    //     _body_height = 0.375;
+    // }else if(data._quadruped->_robotType == RobotType::MINI_CHEETAH){
+    //     _body_height = 0.29;
+    // }else if(data._quadruped->_robotType == RobotType::CHEETAH_3){
+    //     _body_height = 0.45;
+    // }else{
+    //     assert(false);
+    // }
 
   float x_vel_cmd=0, y_vel_cmd=0, z_vel_cmd = 0;
   float filter(0.1);
@@ -482,10 +486,13 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     currently_jumping = false;
   }
   
- // if(_body_height < 0.02) {
-   // _body_height = 0.29;
-  //}  
-
+    // if (data._quadruped->_robotType == RobotType::IUST) {
+    //     _body_height = 0.35;
+    // } else if (data._quadruped->_robotType == RobotType::MINI_CHEETAH) {
+    //     _body_height = 0.29;
+    // } else if (data._quadruped->_robotType == RobotType::CHEETAH_3) {
+    //     _body_height = 0.45;
+    // }
   // integrate position setpoint
   Vec3<float> v_des_robot(_x_vel_des, _y_vel_des, _z_vel_des);
   v_des_robot = seResult.rBody.transpose()*v_des_robot;
@@ -597,7 +604,13 @@ void ConvexMPCLocomotion::run(ControlFSMData<float>& data) {
     //if(firstSwing[i]) {
     //footSwingTrajectories[i].setHeight(.05);
     footSwingTrajectories[i].setHeight(bezierHeight);
-    Vec3<float> offset(0, side_sign[i] * .105, 0);
+    Vec3<float> offset;
+    if (data._quadruped->_robotType == RobotType::IUST){
+        offset << 0, side_sign[i] * 0.125, 0;
+    } else{
+        offset << 0, side_sign[i] * .105, 0;
+    }
+
     Vec3<float> pRobotFrame = (data._quadruped->getHipLocation(i) + offset);
     pRobotFrame[1] += interleave_y[i] * v_abs * interleave_gain;
     
@@ -1157,13 +1170,28 @@ void ConvexMPCLocomotion::solveDenseMPC(int *mpcTable, ControlFSMData<float> &da
   auto seResult = data._stateEstimator->getResult();
 
   //float Q[12] = {0.25, 0.25, 10, 2, 2, 20, 0, 0, 0.3, 0.2, 0.2, 0.2};
-
-  float Q[12] = {0.25, 0.25, 10, 2, 2, 50, 0, 0, 0.3, 0.2, 0.2, 0.1};
+  float Q[12];
+  float alpha;
+  if (data._quadruped->_robotType == RobotType::IUST){
+      //                   roll pitch yaw x  y  z  wx  wy  wz   vx   vy   vz
+      
+      float Q_IUST[12] = {1, 1, 1, 2, 2, 50, 0, 0, 1, 1, 1, 1}; //based on milab
+      alpha = 8e-6; // milab
+      memcpy(Q,Q_IUST,sizeof(Q_IUST));
+  } else if (data._quadruped->_robotType == RobotType::MINI_CHEETAH){
+      float Q_MINI[12] = {0.25, 0.25, 10, 2, 2, 50, 0, 0, 0.3, 0.2, 0.2, 0.1}; //mini cheetah
+      alpha = 4e-5; // mini cheetah
+      memcpy(Q,Q_MINI,sizeof(Q_MINI));
+  }else{
+      float Q_CH3[12] = { 1,   1,    1, 1, 1, 50, 0,  0,  1,   1,   1,   1}; // cheetah 3
+      alpha = 1e-6; // cheetah 3
+      memcpy(Q,Q_CH3,sizeof(Q_CH3));
+  }
 
   //float Q[12] = {0.25, 0.25, 10, 2, 2, 40, 0, 0, 0.3, 0.2, 0.2, 0.2};
   float yaw = seResult.rpy[2];
   float* weights = Q;
-  float alpha = 4e-5; // make setting eventually
+  //float alpha = 4e-5; // make setting eventually
   //float alpha = 4e-7; // make setting eventually: DH
   float* p = seResult.position.data();
   float* v = seResult.vWorld.data();
@@ -1189,7 +1217,13 @@ void ConvexMPCLocomotion::solveDenseMPC(int *mpcTable, ControlFSMData<float> &da
 
   Timer t1;
   dtMPC = dt * iterationsBetweenMPC;
-  setup_problem(dtMPC,horizonLength,0.4,120);
+  if(data._quadruped->_robotType == RobotType::IUST) {
+      setup_problem(dtMPC,horizonLength,0.4,180);
+  }else if(data._quadruped->_robotType == RobotType::MINI_CHEETAH){
+      setup_problem(dtMPC,horizonLength,0.4,120);
+  }else if(data._quadruped->_robotType == RobotType::CHEETAH_3){
+      setup_problem(dtMPC,horizonLength,0.4,650); //DH
+  }
   //setup_problem(dtMPC,horizonLength,0.4,650); //DH
   update_x_drag(x_comp_integral);
    if(vxy[0] > 0.3 || vxy[0] < -0.3) {
@@ -1205,7 +1239,10 @@ void ConvexMPCLocomotion::solveDenseMPC(int *mpcTable, ControlFSMData<float> &da
 
   Timer t2;
   //cout << "dtMPC: " << dtMPC << "\n";
-  update_problem_data_floats(p,v,q,w,r,yaw,weights,trajAll,alpha,mpcTable);
+  if(data._quadruped->_robotType == RobotType::IUST) {
+      milab_flag = true;
+  }else milab_flag = false;
+  update_problem_data_floats(p,v,q,w,r,yaw,weights,trajAll,alpha,mpcTable,milab_flag);
   //t2.stopPrint("Run MPC");
   //printf("MPC Solve time %f ms\n", t2.getMs());
 
@@ -1287,4 +1324,35 @@ void ConvexMPCLocomotion::initSparseMPC() {
 
   _sparseTrajectory.resize(horizonLength);
 }
+void ConvexMPCLocomotion::initMilabSparseMPC() { //For Milab robot
+    Mat3<double> baseInertia;
+//    baseInertia << 0.1084, 0, 0,   //28kg
+//                    0, 0.834, 0,
+//                    0, 0, 0.834;
 
+    baseInertia << 0.0891, 0, 0,   //23kg
+                    0, 0.685, 0,
+                    0, 0, 0.685;
+
+//    baseInertia << 0.0996, 0, 0,   //25.7kg
+//                    0, 0.765, 0,
+//                    0, 0, 0.765;
+
+    double mass = 23;//25.7;
+    double maxForce = 180;
+
+    std::vector<double> dtTraj;
+    for(int i = 0; i < horizonLength; i++) {
+        dtTraj.push_back(dtMPC);
+    }
+
+    Vec12<double> weights;
+    weights <<1,  1 , 1,  2,  2,  50,   0,  0,  1,   1,   1,  1;
+
+    _sparseCMPC.setRobotParameters(baseInertia, mass, maxForce);
+    _sparseCMPC.setFriction(0.4);
+    _sparseCMPC.setWeights(weights, 8e-6);
+    _sparseCMPC.setDtTrajectory(dtTraj);
+
+    _sparseTrajectory.resize(horizonLength);
+}

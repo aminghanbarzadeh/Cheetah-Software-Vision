@@ -11,6 +11,7 @@
 #include "ControlParameters/SimulatorParameters.h"
 #include "Dynamics/Cheetah3.h"
 #include "Dynamics/MiniCheetah.h"
+#include "Dynamics/IUST.h"
 #include "Dynamics/Quadruped.h"
 #include "Graphics3D.h"
 #include "SimUtilities/ImuSimulator.h"
@@ -155,6 +156,7 @@ class Simulation {
   double _timeOfNextHighLevelControl = 0.;
   s64 _highLevelIterations = 0;
   simulator_lcmt _simLCM;
+  bool isIUST = false;
 };
 
 #endif  // PROJECT_SIMULATION_H

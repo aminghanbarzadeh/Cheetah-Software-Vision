@@ -38,7 +38,7 @@ void ImuSimulator<T>::computeAcceleration(
 template <typename T>
 void ImuSimulator<T>::updateVectornav(
     const FBModelState<T> &robotState,
-    const FBModelStateDerivative<T> &robotStateD, VectorNavData *data) {
+    const FBModelStateDerivative<T> &robotStateD, IMUData *data) {
   // body orientation
   RotMat<float> R_body = quaternionToRotationMatrix(
       robotState.bodyOrientation.template cast<float>());

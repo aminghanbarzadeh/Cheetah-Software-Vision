@@ -20,10 +20,13 @@ class RobotState
         Matrix<fpt,3,3> R;
         Matrix<fpt,3,3> R_yaw;
         Matrix<fpt,3,3> R_pitch; //IUST
-        Matrix<fpt,3,3> I_body;
+        Matrix<fpt,3,3> I_body_mini, I_body_milab, I_body_cheetah3, I_body;
         Quaternionf q;
         fpt yaw;
         fpt m = 9;
+        fpt m_mini = 9;
+        fpt m_milab = 23;//25.7;
+        fpt m_cheetah3 = 43;
         float pitch_ascension1 = -.45;
         float pitch_descension1 = 0.3;
         //fpt m = 50.236; //DH

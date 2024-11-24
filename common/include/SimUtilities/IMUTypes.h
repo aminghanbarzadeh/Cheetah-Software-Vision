@@ -10,7 +10,7 @@
 /*!
  * Mini Cheetah's IMU
  */
-struct VectorNavData {
+struct IMUData {
   Vec3<float> accelerometer;
   Vec3<float> gyro;
   Quat<float> quat;

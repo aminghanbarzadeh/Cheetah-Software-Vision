@@ -347,9 +347,11 @@ void SimControlPanel::on_startButton_clicked() {
   RobotType robotType;
 
   if (ui->cheetah3Button->isChecked()) {
-    robotType = RobotType::CHEETAH_3;
+      robotType = RobotType::CHEETAH_3;
   } else if (ui->miniCheetahButton->isChecked()) {
-    robotType = RobotType::MINI_CHEETAH;
+      robotType = RobotType::MINI_CHEETAH;
+  } else if (ui->iustButton->isChecked()) {
+      robotType = RobotType::IUST;
   } else {
     createErrorMessage("Error: you must select a robot");
     return;
@@ -851,7 +853,13 @@ void SimControlPanel::on_goHomeButton_clicked() {
   homeState.bodyPosition = Vec3<double>(0, 0, 0.4);
   homeState.bodyVelocity = SVec<double>::Zero();
   homeState.q = DVec<double>(12);
-  homeState.q << -0.05, -0.8, 1.7, 0.05, -0.8, 1.7, -0.05, -0.8, 1.7, 0.05, -0.8, 1.7;
+  if(_simulation->_robot == RobotType::IUST){
+      printf("[Simulation] MILAB ROBOT ");
+      homeState.q << -0.1, 0.8, -1.7, 0.1, 0.8, -1.7, -0.1, 0.8, -1.7, 0.1, 0.8, -1.7;
+  } else {
+      printf("[Simulation] MIT CHEETAH ");
+      homeState.q << -0.05, -0.8, 1.7, 0.05, -0.8, 1.7, -0.05, -0.8, 1.7, 0.05, -0.8, 1.7;
+  } 
   homeState.qd = homeState.q;
 
   _simulation->setRobotState(homeState);

@@ -88,9 +88,9 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QRadioButton" name="miniCheetahButton">
+           <widget class="QRadioButton" name="iustButton">
             <property name="text">
-             <string>Mini Cheetah</string>
+             <string>IUST</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -101,6 +101,13 @@
            <widget class="QRadioButton" name="cheetah3Button">
             <property name="text">
              <string>Cheetah 3</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="miniCheetahButton">
+            <property name="text">
+             <string>Mini Cheetah</string>
             </property>
            </widget>
           </item>
@@ -183,9 +190,6 @@
             <property name="text">
              <string>Hide Simulated Robot</string>
             </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
            </widget>
           </item>
          </layout>
@@ -207,7 +211,13 @@
           <number>2</number>
          </property>
          <attribute name="horizontalHeaderDefaultSectionSize">
-          <number>160</number>
+          <number>196</number>
+         </attribute>
+         <attribute name="verticalHeaderDefaultSectionSize">
+          <number>30</number>
+         </attribute>
+         <attribute name="verticalHeaderMinimumSectionSize">
+          <number>21</number>
          </attribute>
          <row/>
          <column/>
@@ -268,7 +278,10 @@
           <number>2</number>
          </property>
          <attribute name="horizontalHeaderDefaultSectionSize">
-          <number>160</number>
+          <number>196</number>
+         </attribute>
+         <attribute name="verticalHeaderDefaultSectionSize">
+          <number>28</number>
          </attribute>
          <row/>
          <column/>
@@ -326,13 +339,6 @@
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_6">
              <item>
-              <widget class="QLabel" name="label_4">
-               <property name="text">
-                <string>Kick Angular Velocity</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QLineEdit" name="kickAngularX">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
@@ -368,13 +374,6 @@
                </property>
                <property name="text">
                 <string>0</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_5">
-               <property name="text">
-                <string>Kick Linear Velocity</string>
                </property>
               </widget>
              </item>
@@ -458,7 +457,7 @@
           <number>2</number>
          </property>
          <attribute name="horizontalHeaderDefaultSectionSize">
-          <number>160</number>
+          <number>196</number>
          </attribute>
          <row/>
          <column/>

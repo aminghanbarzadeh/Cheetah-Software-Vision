@@ -314,6 +314,80 @@ void computeLegJacobianAndPosition(Quadruped<T>& quad, Vec3<T>& q, Mat3<T>* J,
   }
 }
 
+
+
+template <typename T>
+void computeIUSTJacobianAndPosition(Quadruped<T>& quad, Vec3<T>& q, Mat6<T>* JJ,
+                                   Vec3<T>* p, int leg) {
+    T l1 = quad._abadLinkLength;
+    T l2 = quad._hipLinkLength;
+    T l3 = quad._kneeLinkLength;
+    T sideSign = quad.getSideSign(leg);
+
+    T s1 = std::sin(q(0));
+    T s2 = std::sin(q(1));
+    T s3 = std::sin(q(2));
+
+    T c1 = std::cos(q(0));
+    T c2 = std::cos(q(1));
+    T c3 = std::cos(q(2));
+
+    T c23 = c2 * c3 - s2 * s3;
+    T s23 = s2 * c3 + c2 * s3;
+
+    if (JJ) {
+        JJ->operator()(0, 0) = -l3 * s1 * c23 - l2 * s1 * c2 + l1 * sideSign * c1;
+        JJ->operator()(0, 1) = -l3 * s1 * c23 - l2 * s1 * c2 + l1 * sideSign * c1;
+        JJ->operator()(0, 2) = 0;
+        JJ->operator()(0, 3) = -l3 * c23 + l2 * c2 * (c1-s1);
+        JJ->operator()(0, 4) = -l3 * c23;
+        JJ->operator()(0, 5) = 0;
+
+        JJ->operator()(1, 0) = -l3 * s23 - l2 * s2;
+        JJ->operator()(1, 1) = -l3 * s23 - l2 * s2;
+        JJ->operator()(1, 2) = l3 * c1 * c23 + l1 * sideSign *s1 - l2 * c1 * c2;
+        JJ->operator()(1, 3) = -l3 * s1 * s23 - l2 * s1 * s2 ;
+        JJ->operator()(1, 4) = -l3 * s1 * s23;
+        JJ->operator()(1, 5) = 0;
+
+        JJ->operator()(2, 0) = 0;
+        JJ->operator()(2, 1) = 0;
+        JJ->operator()(2, 2) = l3 * s1 * c23 - l1 * sideSign * c1 + l2 * c2 * s1;
+        JJ->operator()(2, 3) = l3 * s1 * c23 + l2 * c1 * s2;
+        JJ->operator()(2, 4) = l3 * c1 * s23;
+        JJ->operator()(2, 5) = 0;
+
+        JJ->operator()(3, 0) = 0;
+        JJ->operator()(3, 1) = 0;
+        JJ->operator()(3, 2) = 1;
+        JJ->operator()(3, 3) = 0;
+        JJ->operator()(3, 4) = 0;
+        JJ->operator()(3, 5) = 0;
+
+        JJ->operator()(4, 0) = 0;
+        JJ->operator()(4, 1) = 0;
+        JJ->operator()(4, 2) = 0;
+        JJ->operator()(4, 3) = c1;
+        JJ->operator()(4, 4) = c1;
+        JJ->operator()(4, 5) = c1;
+
+        JJ->operator()(5, 0) = 1;
+        JJ->operator()(5, 1) = 1;
+        JJ->operator()(5, 2) = 0;
+        JJ->operator()(5, 3) = s1;
+        JJ->operator()(5, 4) = s1;
+        JJ->operator()(5, 5) = s1;
+    }
+    // fk
+    if (p) {
+        p->operator()(0) = - l3 * s23 - l2 * s2;
+        p->operator()(1) = l1 * sideSign * c1 + l3 * (s1 * c23) + l2 * c2 * s1;
+        p->operator()(2) = l1 * sideSign * s1 - l3 * (c1 * c23) - l2 * c1 * c2;
+    }
+
+
+}
+
 template void computeLegJacobianAndPosition<double>(Quadruped<double>& quad,
                                                     Vec3<double>& q,
                                                     Mat3<double>* J,

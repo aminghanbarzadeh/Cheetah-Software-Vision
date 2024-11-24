@@ -86,7 +86,7 @@ class ConvexMPCLocomotion {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  ConvexMPCLocomotion(float _dt, int _iterations_between_mpc, MIT_UserParameters* parameters);
+  ConvexMPCLocomotion(float _dt, int _iterations_between_mpc, MIT_UserParameters* parameters,  float fmax, RobotType &robotType);
   void initialize();
 
   template<typename T>
@@ -121,6 +121,7 @@ private:
   float _x_vel_des = 0.;
   float _y_vel_des = 0.;
   float _z_vel_des = 0.;
+  bool milab_flag = false;
 
   // High speed running
   //float _body_height = 0.34;
@@ -134,6 +135,7 @@ private:
   void solveDenseMPC(int *mpcTable, ControlFSMData<float> &data);
   void solveSparseMPC(int *mpcTable, ControlFSMData<float> &data);
   void initSparseMPC();
+  void initMilabSparseMPC();
   int iterationsBetweenMPC;
   int horizonLength;
   int default_iterations_between_mpc;
